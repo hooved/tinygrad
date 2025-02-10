@@ -21,7 +21,10 @@ function loadStateDict(event) {
   else {
     const part = event.data;
     for (const [wasm_idx, wasm_offset] of part.wasm_offsets) {
-      self.model.wasm[wasm_idx].HEAPU8.set(part.bytes, wasm_offset);
+      //self.model.wasm[wasm_idx].HEAPU8.set(part.bytes, wasm_offset);
+      const filePath = '/persistent/myData.bin';
+      self.model.wasm[wasm_idx].FS.writeFile(filePath, part.bytes);
+      self.model.wasm[wasm_idx]._load_buf(wasm_offset);
     }
   }
   self.postMessage("success");

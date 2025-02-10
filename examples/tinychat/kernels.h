@@ -2,6 +2,7 @@
 #define KERNELS_H
 
 void set_buf(size_t index, void* ptr);
+void load_buf(size_t index, size_t offset);
 extern void* bufs[261];
 extern float buf_230[512];
 extern float buf_311[512];

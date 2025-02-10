@@ -1,9 +1,40 @@
 #include <tgmath.h>
 #include <stddef.h>
+#include <stdio.h>
 void* bufs[261];
 void set_buf(size_t index, void* ptr) {
   bufs[index] = ptr;
 }
+int load_buf(void* target) {
+  FILE *fp = fopen("/persistent/myData.bin", "rb");
+  if (!fp) {
+    perror("Error opening file");
+    return 1;
+  }
+
+  // seek to the end to determine the file size
+  if (fseek(fp, 0, SEEK_END) != 0) {
+    perror("fseek");
+    fclose(fp);
+    return 1;
+  }
+  long fsize = ftell(fp);
+  if (fsize < 0) {
+    perror("ftell");
+    fclose(fp);
+    return 1;
+  }
+  rewind(fp);
+
+  size_t bytesRead = fread(target, 1, fsize, fp);
+  fclose(fp);
+  if (bytesRead != (size_t)fsize) {
+    fprintf(stderr, "Error reading file: read %zu of %ld bytes\n", bytesRead, fsize);
+    return 1;
+  }
+  return 0;
+}
+
 float buf_230[512];
 float buf_311[512];
 float buf_356[128256];
