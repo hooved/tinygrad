@@ -2,7 +2,7 @@ from typing import cast, Optional, Callable
 import itertools, functools, random, math, time, multiprocessing, traceback, signal, atexit
 from collections import defaultdict
 from dataclasses import replace
-from tinygrad.ops import UOp, Ops, Variable, sym_infer
+from tinygrad.ops import UOp, Ops, Variable, sym_infer, KernelInfo
 from tinygrad.device import Device, Buffer, Compiler
 from tinygrad.helpers import prod, flatten, DEBUG, CACHELEVEL, diskcache_get, diskcache_put, getenv, Context, colored, time_to_str
 from tinygrad.helpers import IGNORE_BEAM_CACHE, TC_SEARCH_OVER_SHAPE
@@ -188,6 +188,25 @@ def beam_search(lin:Kernel, rawbufs:list[Buffer], amt:int, allow_test_size=True,
 
   if CACHELEVEL >= 1: diskcache_put("beam_search", key, beam[0][0].applied_opts)
   if BEAM_DEBUG: print(f"BEAM_SEARCH: final tm={time_to_str(beam[0][1], w=0)}, applied_opts={beam[0][0].applied_opts}")
+
+  for entry in opts:
+    ast = entry[0].get_optimized_ast()
+    ki = ast.arg if isinstance(ast.arg, KernelInfo) else KernelInfo()
+    # NOTE: assumes the shape is <global dims> <local dims> <group_for_reduces> <reduces> <upcasts/unrolls>
+    full_shape = ast.full_shape
+    first_upcasted = len(full_shape)-ki.upcasted
+    # if there's no reduce, this is first_upcasted. assumes reduces are at the end
+    first_reduce = min([first_upcasted]+flatten(x.axis_arg for x in ast.toposort if x.op is Ops.REDUCE_AXIS))
+    local_loads = [x for x in ast.toposort if x.op is Ops.LOAD and x.src[0].op is Ops.DEFINE_LOCAL]
+    # NOTE: sum up the reduced axes looking across all local loads, yields the number of grouped reduces
+    group_for_reduces = sum([any(l.st_arg.shape[i]!=ast.src[0].st_arg.shape[i] for l in local_loads) for i in range(first_reduce,first_upcasted)])
+    global_dims = first_reduce-ki.local_dims
+    lidxs = full_shape[global_dims:first_reduce+group_for_reduces]
+    if prod(lidxs) > 256:
+      continue
+    return entry[0]
+  
+  print("No kernel found with prod(local_indexes) <= 256!")
   return beam[0][0]
 
 def optimize_local_size(_prg:Callable, global_size:list[int], rawbufs:list[Buffer]) -> list[int]:
