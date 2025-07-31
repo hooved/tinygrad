@@ -1398,15 +1398,21 @@ def train_stable_diffusion():
 
   class StableDiffusion:
     def __init__(self):
+      dtypes.default_float=dtypes.float16
       self.cond_stage_model = FrozenOpenClipEmbedder(**{"dims": 1024, "n_heads": 16, "layers": 24, "return_pooled": False, "ln_penultimate": True,
                                                         "clip_tokenizer_version": "sd_mlperf_v5_0"})
+      dtypes.default_float=dtypes.float32
+
       #self.first_stage_model = AutoencoderKL()
       self.model=None
 
 
   model = StableDiffusion()
-  weights = torch_load(BASEDIR / "checkpoints" / "sd" / "512-base-ema.ckpt")["state_dict"]
+  weights: dict[str,Tensor] = torch_load(BASEDIR / "checkpoints" / "sd" / "512-base-ema.ckpt")["state_dict"]
   weights["cond_stage_model.model.attn_mask"] = Tensor.full((77, 77), fill_value=float("-inf")).triu(1)
+  for k,v in weights.items():
+    if v.dtype is dtypes.float32:
+      weights[k] = v.to(Device.DEFAULT).cast(dtypes.float16)
   load_state_dict(model, weights)
   unet_module.linear = unet_module.AutocastLinear
   unet_module.conv2d = unet_module.AutocastConv2d
@@ -1475,8 +1481,10 @@ def train_stable_diffusion():
 
     context = model.cond_stage_model.embed_tokens(tokens).realize()
 
+    del mean, logvar, std, latent, noise, sqrt_alphas_cumprod_t, sqrt_one_minus_alphas_cumprod_t
     out = unet(latent_with_noise, timestep, context, softmax_dtype=dtypes.float32)
     loss = ((out - v_true) ** 2).mean() * grad_scaler.scale
+    del out, v_true
     loss.backward()
     for p in optimizer.params: p.grad = p.grad / grad_scaler.scale
 
@@ -1572,9 +1580,17 @@ def train_stable_diffusion():
     print(f"step {i} started")
     t1 = time.perf_counter()
 
+    print("batch['npy'][0].flatten()[0:10]")
+    print(batch['npy'][0].flatten()[0:10])
     mean_logvar = Tensor.cat(*[Tensor(x, device="CPU") for x in batch['npy']], dim=0)
+    print("batch['txt']")
+    print(batch['txt'])
     tokens = Tensor.cat(*[model.cond_stage_model.tokenize(text, device="CPU") for text in batch['txt']], dim=0)
 
+    print("mean_logvar")
+    print(mean_logvar)
+    print("tokens")
+    print(tokens)
     loss = train_step(mean_logvar, tokens, unet, optimizer, grad_scaler, lr_scheduler)
     print(f"step {i}: loss: {loss.item():.9f}, elapsed:{(time.perf_counter()-t1):0.3f}")
 
