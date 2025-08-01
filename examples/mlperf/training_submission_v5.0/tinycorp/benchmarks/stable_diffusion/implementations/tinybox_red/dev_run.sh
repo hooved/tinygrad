@@ -18,7 +18,7 @@
 #pip install webdataset
 #pip install torch # for torch.utils.data.DataLoader, which webdataset depends on
 source venv/bin/activate
-#export DEBUG=2
+export DEBUG=2
 export BEAM=5 BEAM_UOPS_MAX=8000 BEAM_UPCAST_MAX=256 BEAM_LOCAL_MAX=1024 BEAM_MIN_PROGRESS=5
 export IGNORE_JIT_FIRST_BEAM=1
 
