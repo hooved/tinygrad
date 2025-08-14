@@ -1387,7 +1387,7 @@ def train_stable_diffusion():
   from collections import namedtuple
   from tinygrad.helpers import Context
   from examples.mlperf.helpers import get_training_state
-  import csv, PIL
+  import csv, PIL, pickle
   import numpy as np
 
   config = {}
@@ -1407,7 +1407,8 @@ def train_stable_diffusion():
   # https://github.com/mlcommons/training_policies/blob/cfa99da479b8d5931f7a3c67612d021dfb47510a/training_rules.adoc#benchmark_specific_rules
   # "Checkpoint must be collected every 512,000 images. CEIL(512000 / global_batch_size) if 512000 is not divisible by GBS."
   # NOTE: It's inferred that "steps" is the unit for the output of the CEIL formula, based on all other cases of CEIL in the rules
-  CKPT_STEP_INTERVAL = config["CKPT_STEP_INTERVAL"]     = math.ceil(512_000 / BS)
+  #CKPT_STEP_INTERVAL = config["CKPT_STEP_INTERVAL"]     = math.ceil(512_000 / BS)
+  CKPT_STEP_INTERVAL = config["CKPT_STEP_INTERVAL"]     = 2000
   print(f"CKPT_STEP_INTERVAL = {CKPT_STEP_INTERVAL}")
 
   BASEDIR            = config["BASEDIR"]                = Path(getenv("BASEDIR", "./"))
@@ -1656,10 +1657,17 @@ def train_stable_diffusion():
 
   if not getenv("EVAL_ONLY", ""):
     # training loop
-    dl = batch_load_train_stable_diffusion(BS)
-    for i, batch in enumerate(dl, start=1):
+    seen_keys = []
+    #dl = batch_load_train_stable_diffusion(BS)
+    #for i, batch in enumerate(dl, start=1):
+    i = 0
+    with open("/home/hooved/stable_diffusion/checkpoints/overfit_set.pickle") as f:
+      batch = pickle.load(f)
+    while True:
+      i += 1
       t0 = time.perf_counter()
       GlobalCounters.reset()
+      seen_keys += batch["__key__"]
 
       mean_logvar = Tensor.cat(*[Tensor(x, device="CPU") for x in batch['npy']], dim=0)
       mean, logvar = Tensor.chunk(mean_logvar.cast(dtypes.half), 2, dim=1)
@@ -1694,6 +1702,9 @@ def train_stable_diffusion():
         fn = f"{UNET_CKPTDIR}/{i}.safetensors"
         print(f"saving training state checkpoint at {fn}")
         safe_save(get_training_state(unet, optimizer, lr_scheduler, grad_scaler), fn)
+        with open(f"{UNET_CKPTDIR}/{i}_seen_keys.pickle", "wb") as f:
+          pickle.dump(seen_keys, f)
+        pause = 1
 
         # Only checkpoint collection is required here; eval can be done offline
         # TODO: move eval to trigger after certain amount of training, and enable running eval only in separate process
