@@ -1407,8 +1407,8 @@ def train_stable_diffusion():
   # https://github.com/mlcommons/training_policies/blob/cfa99da479b8d5931f7a3c67612d021dfb47510a/training_rules.adoc#benchmark_specific_rules
   # "Checkpoint must be collected every 512,000 images. CEIL(512000 / global_batch_size) if 512000 is not divisible by GBS."
   # NOTE: It's inferred that "steps" is the unit for the output of the CEIL formula, based on all other cases of CEIL in the rules
-  CKPT_STEP_INTERVAL = config["CKPT_STEP_INTERVAL"]     = math.ceil(512_000 / BS)
-  #CKPT_STEP_INTERVAL = config["CKPT_STEP_INTERVAL"]     = 2000
+  #CKPT_STEP_INTERVAL = config["CKPT_STEP_INTERVAL"]     = math.ceil(512_000 / BS)
+  CKPT_STEP_INTERVAL = config["CKPT_STEP_INTERVAL"]     = 4000
   print(f"CKPT_STEP_INTERVAL = {CKPT_STEP_INTERVAL}")
 
   BASEDIR            = config["BASEDIR"]                = Path(getenv("BASEDIR", "./"))
