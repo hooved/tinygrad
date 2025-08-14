@@ -1407,8 +1407,8 @@ def train_stable_diffusion():
   # https://github.com/mlcommons/training_policies/blob/cfa99da479b8d5931f7a3c67612d021dfb47510a/training_rules.adoc#benchmark_specific_rules
   # "Checkpoint must be collected every 512,000 images. CEIL(512000 / global_batch_size) if 512000 is not divisible by GBS."
   # NOTE: It's inferred that "steps" is the unit for the output of the CEIL formula, based on all other cases of CEIL in the rules
-  #CKPT_STEP_INTERVAL = config["CKPT_STEP_INTERVAL"]     = math.ceil(512_000 / BS)
-  CKPT_STEP_INTERVAL = config["CKPT_STEP_INTERVAL"]     = 2000
+  CKPT_STEP_INTERVAL = config["CKPT_STEP_INTERVAL"]     = math.ceil(512_000 / BS)
+  #CKPT_STEP_INTERVAL = config["CKPT_STEP_INTERVAL"]     = 2000
   print(f"CKPT_STEP_INTERVAL = {CKPT_STEP_INTERVAL}")
 
   BASEDIR            = config["BASEDIR"]                = Path(getenv("BASEDIR", "./"))
@@ -1731,7 +1731,6 @@ def train_stable_diffusion():
         safe_save(get_training_state(unet, optimizer, lr_scheduler, grad_scaler), fn)
         with open(f"{UNET_CKPTDIR}/{i}_seen_keys.pickle", "wb") as f:
           pickle.dump(seen_keys, f)
-        pause = 1
 
         # Only checkpoint collection is required here; eval can be done offline
         # TODO: move eval to trigger after certain amount of training, and enable running eval only in separate process

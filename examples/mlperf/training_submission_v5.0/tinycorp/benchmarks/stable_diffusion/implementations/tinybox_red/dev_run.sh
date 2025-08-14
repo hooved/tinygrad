@@ -35,7 +35,7 @@ export GPUS=6 BS=6 EVAL_BS=6
 
 export RUN_EVAL=1
 export EVAL_OVERFIT_SET=1
-export EVAL_INTERVAL=500
+export EVAL_INTERVAL=400
 #export EVAL_ONLY=1
 #export EVAL_CKPT_DIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/08051713/run_eval"
 #export EVAL_CKPT_DIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/08051713/run_eval_2"
