@@ -1760,6 +1760,7 @@ def train_stable_diffusion():
         unet_ckpt = {k.replace("model.", ""):v for k,v in safe_load(p).items() if k.startswith("model.")}
         load_state_dict(unet, unet_ckpt)
         clip, fid = eval_unet(unet)
+        denoise_step.reset() # necessary if we eval more than one checkpoint, so jit will use the next checkpoint
         print(f"clip score: {clip}")
         print(f"fid score: {fid}")
         if WANDB:
