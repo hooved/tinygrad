@@ -37,7 +37,7 @@ export RUN_EVAL=1
 export EVAL_OVERFIT_SET=1
 #export EVAL_INTERVAL=400
 export EVAL_ONLY=1
-export EVAL_CKPT_DIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/08142156",
+export EVAL_CKPT_DIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/08142156"
 
 export BASEDIR="/home/hooved/stable_diffusion"
 export DATADIR="/raid/datasets/stable_diffusion"
