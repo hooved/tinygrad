@@ -1407,8 +1407,8 @@ def train_stable_diffusion():
   # https://github.com/mlcommons/training_policies/blob/cfa99da479b8d5931f7a3c67612d021dfb47510a/training_rules.adoc#benchmark_specific_rules
   # "Checkpoint must be collected every 512,000 images. CEIL(512000 / global_batch_size) if 512000 is not divisible by GBS."
   # NOTE: It's inferred that "steps" is the unit for the output of the CEIL formula, based on all other cases of CEIL in the rules
-  #CKPT_STEP_INTERVAL = config["CKPT_STEP_INTERVAL"]     = math.ceil(512_000 / BS)
-  CKPT_STEP_INTERVAL = config["CKPT_STEP_INTERVAL"]     = 42000
+  CKPT_STEP_INTERVAL = config["CKPT_STEP_INTERVAL"]     = math.ceil(512_000 / BS)
+  #CKPT_STEP_INTERVAL = config["CKPT_STEP_INTERVAL"]     = 42000
   print(f"CKPT_STEP_INTERVAL = {CKPT_STEP_INTERVAL}")
 
   BASEDIR            = config["BASEDIR"]                = Path(getenv("BASEDIR", "./"))
@@ -1531,7 +1531,7 @@ def train_stable_diffusion():
         eval_inputs:list[dict] = [{"image_id": int(row["image_id"]), "id": int(row["id"]), "caption": row["caption"]} for row in reader]
       assert len(eval_inputs) == 30_000
     else:
-      with open("/home/hooved/stable_diffusion/checkpoints/overfit_set.pickle", "rb") as f:
+      with open("/home/hooved/stable_diffusion/checkpoints/overfit_set_12.pickle", "rb") as f:
         eval_inputs = pickle.load(f)
       eval_inputs = [{"caption": txt, "mean_logvar": npy} for txt,npy in zip(eval_inputs["txt"], eval_inputs["npy"])]
 
@@ -1697,7 +1697,7 @@ def train_stable_diffusion():
     #dl = batch_load_train_stable_diffusion(BS)
     #for i, batch in enumerate(dl, start=1):
     i = 0
-    with open("/home/hooved/stable_diffusion/checkpoints/overfit_set.pickle", "rb") as f:
+    with open("/home/hooved/stable_diffusion/checkpoints/overfit_set_12.pickle", "rb") as f:
       batch = pickle.load(f)
     while True:
       i += 1

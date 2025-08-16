@@ -30,12 +30,12 @@ export HCQDEV_WAIT_TIMEOUT_MS=300000
 
 export PYTHONPATH="."
 export MODEL="stable_diffusion"
-export GPUS=6 BS=6 EVAL_BS=6
+export GPUS=6 BS=12 EVAL_BS=12
 #export GPUS=1 BS=1 EVAL_BS=1
 
 export RUN_EVAL=1
 export EVAL_OVERFIT_SET=1
-export EVAL_INTERVAL=400
+export EVAL_INTERVAL=4000
 #export EVAL_ONLY=1
 #export EVAL_CKPT_DIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/08142156/run_eval"
 
