@@ -33,13 +33,33 @@ export MODEL="stable_diffusion"
 export GPUS=8 BS=248
 #export GPUS=6
 
-#export EVAL_BS=192
+### works:
+###export CONTEXT_BS=816
+###export DENOISE_BS=992
+###export DECODE_BS=384
+###export INCEPTION_BS=560
+###export CLIP_BS=120
+
+## works:
+###export CONTEXT_BS=816
+###export DENOISE_BS=1672
+###export DECODE_BS=384
+###export INCEPTION_BS=560
+###export CLIP_BS=240
+
 # use separate BS for the various jits in eval to maximize throughput
-export CONTEXT_BS=4352
-export DENOISE_BS=496
+#export CONTEXT_BS=4352
+export CONTEXT_BS=816
+
+export DENOISE_BS=1672
+
 export DECODE_BS=384
-export INCEPTION_BS=2816
-export CLIP_BS=424
+
+#export INCEPTION_BS=2816
+export INCEPTION_BS=560
+
+#export CLIP_BS=424
+export CLIP_BS=240
 
 export RUN_EVAL=1
 #export EVAL_OVERFIT_SET=1
@@ -53,7 +73,7 @@ export CKPTDIR="/raid/weights/stable_diffusion"
 export UNET_CKPTDIR="${BASEDIR}/checkpoints/training_checkpoints/${DATETIME}"
 mkdir -p $UNET_CKPTDIR
 
-export WANDB=1
+#export WANDB=1
 #export PARALLEL=16
 
 RUNMLPERF=1 python3 examples/mlperf/model_train.py

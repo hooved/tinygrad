@@ -1596,7 +1596,7 @@ def train_stable_diffusion():
     def get_batch(whole:Tensor, i:int, bs:int) -> tuple[Tensor, int]:
       batch = whole[i: i + bs]
       if (unpadded_bs:=batch.shape[0]) < bs:
-        batch = batch.cat(batch[-1:].expand(bs - unpadded_bs, -1))
+        batch = batch.cat(batch[-1:].expand(bs - unpadded_bs, *batch[-1].shape))
       return batch, unpadded_bs 
 
 
@@ -1634,6 +1634,10 @@ def train_stable_diffusion():
           sqrt_one_minus_alphas_cumprod_t = sqrt_one_minus_alphas_cumprod[ts].reshape(bs, 1, 1, 1)
           x_x = shard_tensor(Tensor.stack(x.to("CPU"), x.to("CPU"), dim=1).reshape(-1, 4, 64, 64))
           x = denoise_step(x, x_x, ts_ts, uc_c, sqrt_alphas_cumprod_t, sqrt_one_minus_alphas_cumprod_t, alpha_prev, unet, GPUS)
+
+          # TODO: REMOVE, for quickly scanning bs
+          if step_idx == 1:
+            break
         return x
 
       def decode_latents(latents:Tensor) -> Tensor: return decode(shard_tensor(latents))
@@ -1651,11 +1655,34 @@ def train_stable_diffusion():
 
       callbacks = (embed_tokens, generate_latents, decode_latents, generate_inception, calc_clip_scores)
       #tokens = outputs = Tensor.cat(*[cond_stage.tokenize(row["caption"], device="CPU") for row in eval_inputs], dim=0).realize()
-      tokens = outputs = Tensor.cat(*[cond_stage.tokenize(row["caption"], device="CPU") for row in eval_inputs[0:6]], dim=0).realize()
+      #tokens = outputs = Tensor.cat(*[cond_stage.tokenize(row["caption"], device="CPU") for row in eval_inputs[0:6]], dim=0).realize()
+      tokens = []
+      #token_bs = 1000
+
+      # TODO: remove
+      eval_inputs = eval_inputs[0:CONTEXT_BS*2]
+
+      for i in range(0, len(eval_inputs), CONTEXT_BS):
+        subset = [cond_stage.tokenize(row["caption"], device="CPU") for row in eval_inputs[i: i+CONTEXT_BS]]
+        tokens.append(Tensor.cat(*subset, dim=0).realize())
+      outputs = tokens = Tensor.cat(*tokens, dim=0).realize()
+      print("tokens.shape")
+      print(tokens.shape)
+
+      with Context(BEAM=0):
+        all_inputs = [
+          tokens,
+          Tensor.randn(DENOISE_BS*2, 77, 1024, device="AMD").to("CPU").realize(),
+          Tensor.randn(DECODE_BS*2, 4, 64, 64, device="AMD").to("CPU").realize(),
+          imgs:=Tensor.randn(INCEPTION_BS*2, 3, 512, 512, device="AMD").to("CPU").realize(),
+          imgs
+        ]
 
       # wrapper code for every model
-      for model, jit, bs, callback in zip(models, jits, all_bs, callbacks):
-        inputs, outputs = outputs, []
+      for model, jit, bs, callback, inputs in zip(models, jits, all_bs, callbacks, all_inputs):
+        t0 = time.perf_counter()
+        #inputs, outputs = outputs, []
+        outputs = []
         Tensor.realize(*[p.to_(GPUS) for p in get_parameters(model)])
 
         for batch_idx in range(0, inputs.shape[0], bs):
@@ -1664,6 +1691,15 @@ def train_stable_diffusion():
           else: batch = callback(batch)
           # to(GPUS[0]) is necessary for this to work, without that the result is still on GPUS, probably due to a bug
           outputs.append(batch.to(GPUS[0]).to("CPU")[0:unpadded_bs].realize())
+
+          # after at least second run of jit
+          if batch_idx == bs:
+            print("model:")
+            print(model)
+            print(f"batch.shape: {batch.shape}")
+            # includes CPU memory but that's probably small
+            print(f"elapsed: {(time.perf_counter()-t0):.2f} sec, mem_used: {GlobalCounters.mem_used / 1e9:.2f} GB")
+            break
         del batch
 
         outputs = Tensor.cat(*outputs).realize()
@@ -1678,6 +1714,10 @@ def train_stable_diffusion():
         print(f"mem_used: {GlobalCounters.mem_used / 1e9:.2f}")
         jit.reset()
         Tensor.realize(*[p.to_("CPU") for p in get_parameters(model)])
+
+      import sys
+      print("finished eval bs test")
+      sys.exit()
 
       # compute final fid score
       if not getenv("EVAL_OVERFIT_SET", ""):
