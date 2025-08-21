@@ -30,22 +30,22 @@ export HCQDEV_WAIT_TIMEOUT_MS=300000
 
 export PYTHONPATH="."
 export MODEL="stable_diffusion"
-#export GPUS=8 BS=248
-export GPUS=6
+export GPUS=8 BS=248
+#export GPUS=6
 
 #export EVAL_BS=192
 # use separate BS for the various jits in eval to maximize throughput
-export CONTEXT_BS=6
-export DENOISE_BS=6
-export DECODE_BS=6
-export INCEPTION_BS=6
-export CLIP_BS=6
+export CONTEXT_BS=4352
+export DENOISE_BS=496
+export DECODE_BS=384
+export INCEPTION_BS=2816
+export CLIP_BS=424
 
 export RUN_EVAL=1
-export EVAL_OVERFIT_SET=1
+#export EVAL_OVERFIT_SET=1
 #export EVAL_INTERVAL=4000
 export EVAL_ONLY=1
-export EVAL_CKPT_DIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/08142156/run_eval_88000"
+export EVAL_CKPT_DIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/08181458/run_eval"
 
 export BASEDIR="/home/hooved/stable_diffusion"
 export DATADIR="/raid/datasets/stable_diffusion"

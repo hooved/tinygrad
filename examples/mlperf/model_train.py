@@ -1673,6 +1673,9 @@ def train_stable_diffusion():
         elif isinstance(model, OpenClipEncoder):
           clip_scores = outputs
         
+        print("done with model:")
+        print(model)
+        print(f"mem_used: {GlobalCounters.mem_used / 1e9:.2f}")
         jit.reset()
         Tensor.realize(*[p.to_("CPU") for p in get_parameters(model)])
 
