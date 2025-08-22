@@ -87,7 +87,19 @@ class Decoder:
         bs,c,py,px = x.shape
         x = x.reshape(bs, c, py, 1, px, 1).expand(bs, c, py, 2, px, 2).reshape(bs, c, py*2, px*2)
         x = l['upsample']['conv'](x)
-      x.realize()
+
+      print("realizing in decode 2")
+      print(x)
+      print(x.shape)
+      print(x.device)
+      print(x.dtype)
+      print(x.uop)
+      if x.shape[1:] == (128,512,512):
+        with Context(BEAM=0):
+          print("nobeam realize in decode 2")
+          x.realize()
+      else: x.realize()
+      print("done realizing in decode 2")
 
     return self.conv_out(self.norm_out(x).swish())
 

@@ -1584,6 +1584,10 @@ def train_stable_diffusion():
         x = model.first_stage_model.post_quant_conv(1./0.18215 * x)
         x = model.first_stage_model.decoder(x)
         x = ((x + 1.0) / 2.0).clip(0.0, 1.0)
+        print("realizing in decode")
+        #with Context(BEAM=0):
+        x.realize()
+        print("done realizing in decode")
         return x
 
     def shard_tensor(t:Tensor, in_place=False) -> Tensor:
@@ -1636,11 +1640,15 @@ def train_stable_diffusion():
           x = denoise_step(x, x_x, ts_ts, uc_c, sqrt_alphas_cumprod_t, sqrt_one_minus_alphas_cumprod_t, alpha_prev, unet, GPUS)
 
           # TODO: REMOVE, for quickly scanning bs
-          if step_idx == 1:
+          if step_idx == 3:
             break
         return x
 
-      def decode_latents(latents:Tensor) -> Tensor: return decode(shard_tensor(latents))
+      def decode_latents(latents:Tensor) -> Tensor:
+        ret = decode(shard_tensor(latents))
+        print("exiting decode latents")
+        return ret
+        #return decode(shard_tensor(latents))
       def generate_inception(imgs:Tensor) -> Tensor: return jit_inception(shard_tensor(imgs))[:,:,0,0]
 
       def calc_clip_scores(batch:Tensor, batch_tokens:Tensor) -> Tensor:
@@ -1690,6 +1698,11 @@ def train_stable_diffusion():
           if isinstance(model, OpenClipEncoder): batch = callback(batch, get_batch(tokens, batch_idx, bs)[0])
           else: batch = callback(batch)
           # to(GPUS[0]) is necessary for this to work, without that the result is still on GPUS, probably due to a bug
+          print("moving to GPUS[0]")
+          print(f"realized: {batch.uop.base.is_realized}")
+          print(f"batch.shape: {batch.shape}")
+          print(f"batch.device: {batch.device}")
+          #with Context(BEAM=0):
           outputs.append(batch.to(GPUS[0]).to("CPU")[0:unpadded_bs].realize())
 
           # after at least second run of jit

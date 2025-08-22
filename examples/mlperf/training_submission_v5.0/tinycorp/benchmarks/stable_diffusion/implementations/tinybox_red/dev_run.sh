@@ -18,9 +18,9 @@
 #pip install --index-url https://download.pytorch.org/whl/cpu torch # for torch.utils.data.DataLoader, which webdataset depends on
 #pip install webdataset
 source venv/bin/activate
-#export DEBUG=2
-#export BEAM=5 BEAM_UOPS_MAX=8000 BEAM_UPCAST_MAX=256 BEAM_LOCAL_MAX=1024 BEAM_MIN_PROGRESS=5
-#export IGNORE_JIT_FIRST_BEAM=1
+export DEBUG=6
+export BEAM=5 BEAM_UOPS_MAX=8000 BEAM_UPCAST_MAX=256 BEAM_LOCAL_MAX=1024 BEAM_MIN_PROGRESS=5
+export IGNORE_JIT_FIRST_BEAM=1
 
 #export SEED=$RANDOM
 DATETIME=$(date "+%m%d%H%M")
@@ -51,12 +51,16 @@ export GPUS=8 BS=248
 #export CONTEXT_BS=4352
 export CONTEXT_BS=816
 
-export DENOISE_BS=1672
+#export DENOISE_BS=1672
+export DENOISE_BS=600
 
 export DECODE_BS=384
+#export DECODE_BS=376
+#export DECODE_BS=256
 
 #export INCEPTION_BS=2816
 export INCEPTION_BS=560
+##export INCEPTION_BS=480
 
 #export CLIP_BS=424
 export CLIP_BS=240
