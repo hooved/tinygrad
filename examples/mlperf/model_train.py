@@ -1596,7 +1596,7 @@ def train_stable_diffusion():
     def get_batch(whole:Tensor, i:int, bs:int) -> tuple[Tensor, int]:
       batch = whole[i: i + bs]
       if (unpadded_bs:=batch.shape[0]) < bs:
-        batch = batch.cat(batch[-1:].expand(bs - unpadded_bs, -1))
+        batch = batch.cat(batch[-1:].expand(bs - unpadded_bs, *batch[-1].shape))
       return batch, unpadded_bs 
 
 
@@ -1650,8 +1650,17 @@ def train_stable_diffusion():
         return batch
 
       callbacks = (embed_tokens, generate_latents, decode_latents, generate_inception, calc_clip_scores)
+
+      if (limit_eval_samples:=getenv("LIMIT_EVAL_SAMPLES", len(eval_inputs))):
+        eval_inputs = eval_inputs[0:limit_eval_samples]
+
       #tokens = outputs = Tensor.cat(*[cond_stage.tokenize(row["caption"], device="CPU") for row in eval_inputs], dim=0).realize()
-      tokens = outputs = Tensor.cat(*[cond_stage.tokenize(row["caption"], device="CPU") for row in eval_inputs[0:6]], dim=0).realize()
+      # prevent recursion error in Tensor.cat
+      tokens = []
+      for i in range(0, len(eval_inputs), CONTEXT_BS):
+        subset = [cond_stage.tokenize(row["caption"], device="CPU") for row in eval_inputs[i: i+CONTEXT_BS]]
+        tokens.append(Tensor.cat(*subset, dim=0).realize())
+      outputs = tokens = Tensor.cat(*tokens, dim=0).realize()
 
       # wrapper code for every model
       for model, jit, bs, callback in zip(models, jits, all_bs, callbacks):
@@ -1739,19 +1748,34 @@ def train_stable_diffusion():
         wandb_log = {"train/loss": loss.item(), "train/step_time": elapsed, "lr": optimizer.lr.item(), "train/loss_scale": grad_scaler.scale.item(),
                      "train/GFLOPS": GlobalCounters.global_ops * 1e-9 / elapsed, "train/step": i}
 
-      if i % CKPT_STEP_INTERVAL == 0:
-        # https://github.com/mlcommons/training_policies/blob/master/training_rules.adoc#14-appendix-benchmark-specific-rules
-        # "evaluation is done offline, the time is not counted towards the submission time."
-
-        if i == CKPT_STEP_INTERVAL and WANDB and wandb.run is not None:
+        if i == 1 and wandb.run is not None:
           with open(f"{UNET_CKPTDIR}/wandb_run_id_{wandb.run.id}", "w") as f:
             f.write(f"wandb.run.id = {wandb.run.id}")
 
-        fn = f"{UNET_CKPTDIR}/backup.safetensors"
-        print(f"saving training state checkpoint at {fn}")
+      if (BACKUP_INTERVAL:=getenv("BACKUP_INTERVAL", 0)) and i % BACKUP_INTERVAL == 0:
+        prev_ckpt = [file for file in Path(UNET_CKPTDIR).iterdir() if file.is_file() and file.name.startswith("backup_")]
+        prev_ckpt = sorted(prev_ckpt, key=lambda x: int(x.name.split("backup_")[1].split(".safetensors")[0]))
+        # seen keys from dataset
+        prev_keys = [file for file in Path(UNET_CKPTDIR).iterdir() if file.is_file() and file.name.startswith("keys_")]
+        prev_keys = sorted(prev_keys, key=lambda x: int(x.name.split("keys_")[1].split(".pickle")[0]))
+        fn = f"{UNET_CKPTDIR}/backup_{i}.safetensors"
+        print(f"saving training state backup at {fn}")
         safe_save(get_training_state(unet, optimizer, lr_scheduler, grad_scaler), fn)
-        with open(f"{UNET_CKPTDIR}/seen_keys.pickle", "wb") as f:
+        with open(f"{UNET_CKPTDIR}/keys_{i}.pickle", "wb") as f:
           pickle.dump(seen_keys, f)
+
+        # delete all except above backup, and penultimate backup (prev[-1]):
+        for prev in (prev_ckpt, prev_keys):
+          for to_delete in prev[:-1]:
+            print(f"deleting {to_delete.name}")
+            to_delete.unlink()
+
+      if i % CKPT_STEP_INTERVAL == 0:
+        # https://github.com/mlcommons/training_policies/blob/master/training_rules.adoc#14-appendix-benchmark-specific-rules
+        # "evaluation is done offline, the time is not counted towards the submission time."
+        fn = f"{UNET_CKPTDIR}/{i}.safetensors"
+        print(f"saving unet checkpoint at {fn}")
+        safe_save(get_state_dict(unet), fn)
 
       if getenv("RUN_EVAL", ""):
         EVAL_INTERVAL = getenv("EVAL_INTERVAL", math.ceil(512_000 / BS))
