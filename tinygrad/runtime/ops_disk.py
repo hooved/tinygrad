@@ -30,7 +30,11 @@ class DiskDevice(Compiled):
       os.close(fd)
     else:
       try: self.fd = os.open(filename, os.O_RDWR|os.O_CREAT|getattr(os, "O_DIRECT", 0))
-      except OSError: self.fd = os.open(filename, os.O_RDWR|os.O_CREAT)
+      except OSError:
+        try:
+          self.fd = os.open(filename, os.O_RDWR|os.O_CREAT)
+        except PermissionError: # when loading weights from a read-only path, above throws exception
+          self.fd = os.open(filename, os.O_RDONLY)
       if not pathlib.Path(filename).is_block_device() and os.fstat(self.fd).st_size < self.size: os.ftruncate(self.fd, self.size)
       self.mem = mmap.mmap(self.fd, self.size)
     if hasattr(self.mem, 'madvise') and (hp := getattr(mmap, "MADV_HUGEPAGE", None)) is not None:
