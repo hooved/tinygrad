@@ -1664,16 +1664,19 @@ def train_stable_diffusion():
 
       # wrapper code for every model
       for model, jit, bs, callback in zip(models, jits, all_bs, callbacks):
+        t0 = time.perf_counter()
         print(f"starting eval with model: {model}")
         inputs, outputs = outputs, []
         Tensor.realize(*[p.to_(GPUS) for p in get_parameters(model)])
 
         for batch_idx in tqdm(range(0, inputs.shape[0], bs)):
+          t1 = time.perf_counter()
           batch, unpadded_bs = get_batch(inputs, batch_idx, bs)
           if isinstance(model, OpenClipEncoder): batch = callback(batch, get_batch(tokens, batch_idx, bs)[0])
           else: batch = callback(batch)
           # to(GPUS[0]) is necessary for this to work, without that the result is still on GPUS, probably due to a bug
           outputs.append(batch.to(GPUS[0]).to("CPU")[0:unpadded_bs].realize())
+          print(f"model: {model}, batch_idx: {batch_idx}, elapsed: {(time.perf_counter() - t1):.2f}")
         del batch
 
         outputs = Tensor.cat(*outputs).realize()
@@ -1686,7 +1689,7 @@ def train_stable_diffusion():
         
         jit.reset()
         Tensor.realize(*[p.to_("CPU") for p in get_parameters(model)])
-        print(f"done with model: {model}")
+        print(f"done with model: {model}, elapsed: {(time.perf_counter() - t0):.2f}")
 
       # compute final fid score
       if not getenv("EVAL_OVERFIT_SET", ""):
