@@ -1679,7 +1679,12 @@ def train_stable_diffusion():
           print(f"model: {model}, batch_idx: {batch_idx}, elapsed: {(time.perf_counter() - t1):.2f}")
         del batch
 
-        outputs = Tensor.cat(*outputs).realize()
+        #outputs = Tensor.cat(*outputs).realize() # too slow to be useful
+        #with Context(BEAM=0):
+        cat_out = Tensor.zeros(len(eval_inputs), *outputs[0].shape[1:], device="CPU").contiguous().realize()
+        for i, j in tqdm(enumerate(range(0, len(eval_inputs), bs))):
+          cat_out[j: j+bs].assign(outputs[i]).realize()
+        outputs, cat_out = cat_out, None
         print(f"outputs catted from model: {model}")
         if isinstance(model, FidInceptionV3):
           inception_activations = outputs
