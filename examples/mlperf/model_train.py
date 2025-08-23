@@ -1657,17 +1657,18 @@ def train_stable_diffusion():
       #tokens = outputs = Tensor.cat(*[cond_stage.tokenize(row["caption"], device="CPU") for row in eval_inputs], dim=0).realize()
       # prevent recursion error in Tensor.cat
       tokens = []
-      for i in range(0, len(eval_inputs), CONTEXT_BS):
+      for i in tqdm(range(0, len(eval_inputs), CONTEXT_BS)):
         subset = [cond_stage.tokenize(row["caption"], device="CPU") for row in eval_inputs[i: i+CONTEXT_BS]]
         tokens.append(Tensor.cat(*subset, dim=0).realize())
       outputs = tokens = Tensor.cat(*tokens, dim=0).realize()
 
       # wrapper code for every model
       for model, jit, bs, callback in zip(models, jits, all_bs, callbacks):
+        print(f"starting eval with model: {model}")
         inputs, outputs = outputs, []
         Tensor.realize(*[p.to_(GPUS) for p in get_parameters(model)])
 
-        for batch_idx in range(0, inputs.shape[0], bs):
+        for batch_idx in tqdm(range(0, inputs.shape[0], bs)):
           batch, unpadded_bs = get_batch(inputs, batch_idx, bs)
           if isinstance(model, OpenClipEncoder): batch = callback(batch, get_batch(tokens, batch_idx, bs)[0])
           else: batch = callback(batch)
@@ -1676,6 +1677,7 @@ def train_stable_diffusion():
         del batch
 
         outputs = Tensor.cat(*outputs).realize()
+        print(f"outputs catted from model: {model}")
         if isinstance(model, FidInceptionV3):
           inception_activations = outputs
           outputs = inputs # reuse input images for clip scoring
@@ -1684,6 +1686,7 @@ def train_stable_diffusion():
         
         jit.reset()
         Tensor.realize(*[p.to_("CPU") for p in get_parameters(model)])
+        print(f"done with model: {model}")
 
       # compute final fid score
       if not getenv("EVAL_OVERFIT_SET", ""):
