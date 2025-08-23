@@ -40,11 +40,11 @@ export DENOISE_BS=600
 export DECODE_BS=384
 export INCEPTION_BS=560
 export CLIP_BS=240
-#export RUN_EVAL=1
+export RUN_EVAL=1
 #export EVAL_OVERFIT_SET=1
 #export EVAL_INTERVAL=2065
-#export EVAL_ONLY=1
-#export EVAL_CKPT_DIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/08181458/run_eval"
+export EVAL_ONLY=1
+export EVAL_CKPT_DIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/08221929/run_eval"
 #export LIMIT_EVAL_SAMPLES=2000
 
 export BASEDIR="/home/hooved/stable_diffusion"
