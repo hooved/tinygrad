@@ -1479,8 +1479,6 @@ def train_stable_diffusion():
   alphas_cumprod = get_alphas_cumprod()
   sqrt_alphas_cumprod = alphas_cumprod.sqrt().realize()
   sqrt_one_minus_alphas_cumprod = (1 - alphas_cumprod).sqrt().realize()
-  if RESUME_CKPT:
-    load_state_dict(unet, safe_load(RESUME_CKPT)["model"])
 
   if len(GPUS) > 1:
     to_move = get_parameters(unet) + get_parameters(model.cond_stage_model) + [sqrt_alphas_cumprod, sqrt_one_minus_alphas_cumprod]
@@ -1499,9 +1497,11 @@ def train_stable_diffusion():
     grad_scaler = GradScaler(optimizer, init_scale)
     if RESUME_CKPT:
       ckpt = safe_load(RESUME_CKPT)
-      load_state_dict(optimizer, ckpt["optimizer"])
-      load_state_dict(lr_scheduler, ckpt["scheduler"])
-      load_state_dict(grad_scaler, ckpt["grad_scaler"])
+      for (obj, pat) in [(unet, "model."), (optimizer, "optimizer."), (lr_scheduler, "scheduler."), (grad_scaler, "grad_scaler.")]:
+        sd = {k.split(pat)[1]: v for k,v in ckpt.items() if k.startswith(pat)}
+        with Context(DEBUG=1):
+          print(f"loading {pat}")
+          load_state_dict(obj, sd, strict=False)
 
     # this is most but not all of the tensors that are used only in training, we will offload them to free up memory for eval
     #train_only_tensors = get_parameters([model.cond_stage_model]) + optimizer.m + optimizer.v
