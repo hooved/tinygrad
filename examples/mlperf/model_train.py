@@ -1420,6 +1420,9 @@ def train_stable_diffusion():
   CKPTDIR            = config["CKPTDIR"]                = Path(getenv("CKPTDIR", "./checkpoints"))
   DATADIR            = config["DATADIR"]                = Path(getenv("DATADIR", "./datasets"))
   UNET_CKPTDIR       = config["UNET_CKPTDIR"]           = Path(getenv("UNET_CKPTDIR", "./checkpoints/training_checkpoints"))
+  RESUME_CKPT        = config["RESUME_CKPT"]            = getenv("RESUME_CKPT", "")
+  RESUME_ITR         = config["RESUME_ITR"]             = getenv("RESUME_ITR", 0)
+  if RESUME_ITR or RESUME_CKPT: assert RESUME_ITR and RESUME_CKPT
 
   # ** init wandb **
   WANDB = getenv("WANDB")
@@ -1476,6 +1479,8 @@ def train_stable_diffusion():
   alphas_cumprod = get_alphas_cumprod()
   sqrt_alphas_cumprod = alphas_cumprod.sqrt().realize()
   sqrt_one_minus_alphas_cumprod = (1 - alphas_cumprod).sqrt().realize()
+  if RESUME_CKPT:
+    load_state_dict(unet, safe_load(RESUME_CKPT)["model"])
 
   if len(GPUS) > 1:
     to_move = get_parameters(unet) + get_parameters(model.cond_stage_model) + [sqrt_alphas_cumprod, sqrt_one_minus_alphas_cumprod]
@@ -1492,6 +1497,11 @@ def train_stable_diffusion():
     lr_scheduler.step()
     init_scale = 2.0**16
     grad_scaler = GradScaler(optimizer, init_scale)
+    if RESUME_CKPT:
+      ckpt = safe_load(RESUME_CKPT)
+      load_state_dict(optimizer, ckpt["optimizer"])
+      load_state_dict(lr_scheduler, ckpt["scheduler"])
+      load_state_dict(grad_scaler, ckpt["grad_scaler"])
 
     # this is most but not all of the tensors that are used only in training, we will offload them to free up memory for eval
     #train_only_tensors = get_parameters([model.cond_stage_model]) + optimizer.m + optimizer.v
@@ -1734,6 +1744,7 @@ def train_stable_diffusion():
       #batch = pickle.load(f)
     #while True:
       #i += 1
+      i = RESUME_ITR + i
       t0 = time.perf_counter()
       GlobalCounters.reset()
       seen_keys += batch["__key__"]

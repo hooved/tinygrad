@@ -32,6 +32,8 @@ export PYTHONPATH="."
 export MODEL="stable_diffusion"
 # training BS
 export GPUS=8 BS=248
+export RESUME_CKPT="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/08221929/backup_8260.safetensors"
+export RESUME_ITR=8260
 export BACKUP_INTERVAL=2065
 # eval BS
 # use separate BS for the various jits in eval to maximize throughput
@@ -40,10 +42,10 @@ export DENOISE_BS=600
 export DECODE_BS=384
 export INCEPTION_BS=560
 export CLIP_BS=240
-export RUN_EVAL=1
+#export RUN_EVAL=1
 #export EVAL_OVERFIT_SET=1
 #export EVAL_INTERVAL=2065
-export EVAL_ONLY=1
+#export EVAL_ONLY=1
 export EVAL_CKPT_DIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/08221929/run_eval"
 #export LIMIT_EVAL_SAMPLES=2000
 
