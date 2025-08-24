@@ -34,7 +34,8 @@ export MODEL="stable_diffusion"
 export GPUS=8 BS=248
 export RESUME_CKPT="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/08221929/backup_8260.safetensors"
 export RESUME_ITR=8260
-export BACKUP_INTERVAL=2065
+#export BACKUP_INTERVAL=2065
+export BACKUP_INTERVAL=413
 # eval BS
 # use separate BS for the various jits in eval to maximize throughput
 export CONTEXT_BS=816
@@ -55,7 +56,7 @@ export CKPTDIR="/raid/weights/stable_diffusion"
 export UNET_CKPTDIR="${BASEDIR}/checkpoints/training_checkpoints/${DATETIME}"
 mkdir -p $UNET_CKPTDIR
 
-#export WANDB=1
+export WANDB=1
 export PARALLEL=0
 #export PARALLEL=16
 
