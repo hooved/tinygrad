@@ -50,17 +50,19 @@ export BACKUP_INTERVAL=413
 # tinybox red
 export GPUS=6 BS=12
 export CONTEXT_BS=600
-export DENOISE_BS=144
-export DECODE_BS=138
-export INCEPTION_BS=576
-export CLIP_BS=120
+#export DENOISE_BS=144
+export DENOISE_BS=96
+#export DECODE_BS=138
+export DECODE_BS=90
+export INCEPTION_BS=480
+export CLIP_BS=84
 
 export RUN_EVAL=1
 #export EVAL_OVERFIT_SET=1
 #export EVAL_INTERVAL=2065
 export EVAL_ONLY=1
-export EVAL_CKPT_DIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/08221929/run_eval"
-#export LIMIT_EVAL_SAMPLES=2000
+export EVAL_CKPT_DIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/08241246/run_eval"
+#export LIMIT_EVAL_SAMPLES=600
 
 export BASEDIR="/home/hooved/stable_diffusion"
 

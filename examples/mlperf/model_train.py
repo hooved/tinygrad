@@ -1660,9 +1660,9 @@ def train_stable_diffusion():
         return batch
 
       callbacks = (embed_tokens, generate_latents, decode_latents, generate_inception, calc_clip_scores)
-
       if (limit_eval_samples:=getenv("LIMIT_EVAL_SAMPLES", len(eval_inputs))):
         eval_inputs = eval_inputs[0:limit_eval_samples]
+      output_shapes = [(ns:=len(eval_inputs),77,1024), (ns,4,64,64), (ns,3,512,512), (ns,2048), (ns,)]
 
       #tokens = outputs = Tensor.cat(*[cond_stage.tokenize(row["caption"], device="CPU") for row in eval_inputs], dim=0).realize()
       # prevent recursion error in Tensor.cat
@@ -1673,10 +1673,11 @@ def train_stable_diffusion():
       outputs = tokens = Tensor.cat(*tokens, dim=0).realize()
 
       # wrapper code for every model
-      for model, jit, bs, callback in zip(models, jits, all_bs, callbacks):
+      for model, jit, bs, callback, output_shape in zip(models, jits, all_bs, callbacks, output_shapes):
         t0 = time.perf_counter()
         print(f"starting eval with model: {model}")
-        inputs, outputs = outputs, []
+        #inputs, outputs = outputs, []
+        inputs, outputs = outputs, Tensor.zeros(*output_shape, device="CPU").contiguous().realize()
         Tensor.realize(*[p.to_(GPUS) for p in get_parameters(model)])
 
         for batch_idx in tqdm(range(0, inputs.shape[0], bs)):
@@ -1685,17 +1686,11 @@ def train_stable_diffusion():
           if isinstance(model, OpenClipEncoder): batch = callback(batch, get_batch(tokens, batch_idx, bs)[0])
           else: batch = callback(batch)
           # to(GPUS[0]) is necessary for this to work, without that the result is still on GPUS, probably due to a bug
-          outputs.append(batch.to(GPUS[0]).to("CPU")[0:unpadded_bs].realize())
+          batch = batch.to(GPUS[0]).to("CPU")[0:unpadded_bs].realize()
+          outputs[batch_idx: batch_idx+bs].assign(batch).realize()
           print(f"model: {model}, batch_idx: {batch_idx}, elapsed: {(time.perf_counter() - t1):.2f}")
         del batch
 
-        #outputs = Tensor.cat(*outputs).realize() # too slow to be useful
-        #with Context(BEAM=0):
-        cat_out = Tensor.zeros(len(eval_inputs), *outputs[0].shape[1:], device="CPU").contiguous().realize()
-        for i, j in tqdm(enumerate(range(0, len(eval_inputs), bs))):
-          cat_out[j: j+bs].assign(outputs[i]).realize()
-        outputs, cat_out = cat_out, None
-        print(f"outputs catted from model: {model}")
         if isinstance(model, FidInceptionV3):
           inception_activations = outputs
           outputs = inputs # reuse input images for clip scoring
@@ -1705,6 +1700,7 @@ def train_stable_diffusion():
         jit.reset()
         Tensor.realize(*[p.to_("CPU") for p in get_parameters(model)])
         print(f"done with model: {model}, elapsed: {(time.perf_counter() - t0):.2f}")
+      del inputs # GC ~94GB of images
 
       # compute final fid score
       if not getenv("EVAL_OVERFIT_SET", ""):
@@ -1834,6 +1830,7 @@ def train_stable_diffusion():
         unet_ckpt = safe_load(p)
         load_state_dict(unet, unet_ckpt)
         clip, fid = eval_unet(eval_inputs, unet, model.cond_stage_model, model.first_stage_model, inception, clip_encoder)
+        print(f"eval results for {p.name}:")
         print(f"clip score: {clip}")
         print(f"fid score: {fid}")
         if WANDB:
