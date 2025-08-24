@@ -32,8 +32,10 @@ export PYTHONPATH="."
 export MODEL="stable_diffusion"
 # training BS
 export GPUS=8 BS=248
-export RESUME_CKPTDIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/08221929"
-export RESUME_ITR=8260
+#export RESUME_CKPTDIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/08221929"
+#export RESUME_ITR=8260
+export RESUME_CKPTDIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/08240131"
+export RESUME_ITR=10738
 #export BACKUP_INTERVAL=2065
 export BACKUP_INTERVAL=413
 # eval BS
