@@ -1838,8 +1838,7 @@ def train_stable_diffusion():
       elif p.name.endswith(".safetensors"):
         ckpt_iteration = p.name.split(".safetensors")[0]
         if ckpt_iteration.isdigit(): ckpt_iteration = int(ckpt_iteration)
-        unet_ckpt = {k.replace("model.", ""):v for k,v in safe_load(p).items() if k.startswith("model.")}
-        load_state_dict(unet, unet_ckpt)
+        load_state_dict(unet, safe_load(p))
         clip, fid = eval_unet(eval_inputs, unet, model.cond_stage_model, model.first_stage_model, inception, clip_encoder)
         print(f"clip score: {clip}")
         print(f"fid score: {fid}")
