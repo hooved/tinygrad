@@ -1420,9 +1420,9 @@ def train_stable_diffusion():
   CKPTDIR            = config["CKPTDIR"]                = Path(getenv("CKPTDIR", "./checkpoints"))
   DATADIR            = config["DATADIR"]                = Path(getenv("DATADIR", "./datasets"))
   UNET_CKPTDIR       = config["UNET_CKPTDIR"]           = Path(getenv("UNET_CKPTDIR", "./checkpoints/training_checkpoints"))
-  RESUME_CKPT        = config["RESUME_CKPT"]            = getenv("RESUME_CKPT", "")
+  RESUME_CKPTDIR        = config["RESUME_CKPTDIR"]            = getenv("RESUME_CKPTDIR", "")
   RESUME_ITR         = config["RESUME_ITR"]             = getenv("RESUME_ITR", 0)
-  if RESUME_ITR or RESUME_CKPT: assert RESUME_ITR and RESUME_CKPT
+  if RESUME_ITR or RESUME_CKPTDIR: assert RESUME_ITR and RESUME_CKPTDIR
 
   # ** init wandb **
   WANDB = getenv("WANDB")
@@ -1495,8 +1495,8 @@ def train_stable_diffusion():
     lr_scheduler.step()
     init_scale = 2.0**16
     grad_scaler = GradScaler(optimizer, init_scale)
-    if RESUME_CKPT:
-      ckpt = safe_load(RESUME_CKPT)
+    if RESUME_CKPTDIR:
+      ckpt = safe_load(f"{RESUME_CKPTDIR}/backup_{RESUME_ITR}.safetensors")
       for (obj, pat) in [(unet, "model."), (optimizer, "optimizer."), (lr_scheduler, "scheduler."), (grad_scaler, "grad_scaler.")]:
         sd = {k.split(pat)[1]: v for k,v in ckpt.items() if k.startswith(pat)}
         with Context(DEBUG=1):
@@ -1736,7 +1736,9 @@ def train_stable_diffusion():
 
   if not getenv("EVAL_ONLY", ""):
     # training loop
-    seen_keys = []
+    if RESUME_CKPTDIR:
+      with open(f"{RESUME_CKPTDIR}/keys_{RESUME_ITR}.pickle", "rb") as f: seen_keys = pickle.load(f)
+    else: seen_keys = []
     dl = batch_load_train_stable_diffusion(BS)
     for i, batch in enumerate(dl, start=1):
     #i = 0
