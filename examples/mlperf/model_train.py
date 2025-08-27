@@ -1531,13 +1531,14 @@ def train_stable_diffusion():
     loss = (((out - v_true) ** 2).mean() * grad_scaler.scale) / float(grad_acc_steps)
     del out, v_true, context
     loss.backward()
-    for p in optimizer.params: p.grad = p.grad / grad_scaler.scale
+    #for p in optimizer.params: p.grad = p.grad / grad_scaler.scale
     loss = loss.detach() / grad_scaler.scale
     Tensor.realize(*[p.grad for p in optimizer.params] + [loss])
     return loss
 
   @TinyJit
   def apply_grads(optimizer:LAMB, grad_scaler:GradScaler, lr_scheduler:LambdaLR):
+    for p in optimizer.params: p.grad = p.grad / grad_scaler.scale
     # skip the optimizer step if non-finite grads are detected
     grad_scaler.step()
     # the lr still updates even if we skipped an optimizer step
