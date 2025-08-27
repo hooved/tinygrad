@@ -1399,7 +1399,10 @@ def train_stable_diffusion():
 
   # ** hyperparameters **
   BS                 = config["BS"]                     = getenv("BS", 1 * len(GPUS))
-  print(f"BS = {BS}")
+  lr                 = config["LEARNING_RATE"]          = getenv("LEARNING_RATE", 1.25e-7)
+  GRAD_ACC_STEPS     = config["GRAD_ACC_STEPS"]         = getenv("GRAD_ACC_STEPS", 4)
+  assert BS % GRAD_ACC_STEPS == 0
+  print(f"BS={BS}, lr={lr}")
   #EVAL_BS            = config["EVAL_BS"]                = getenv("EVAL_BS", 1 * len(GPUS))
   #assert 30_000 % EVAL_BS == 0, "Eval (which generates 30,000 images) is currently implemented without padding"
   CONTEXT_BS          = config["CONTEXT_BS"]            = getenv("CONTEXT_BS", 1 * len(GPUS))
@@ -1407,8 +1410,6 @@ def train_stable_diffusion():
   DECODE_BS           = config["DECODE_BS"]             = getenv("DECODE_BS", 1 * len(GPUS))
   INCEPTION_BS        = config["INCEPTION_BS"]          = getenv("INCEPTION_BS", 1 * len(GPUS))
   CLIP_BS             = config["CLIP_BS"]               = getenv("CLIP_BS", 1 * len(GPUS))
-
-  lr                 = config["LEARNING_RATE"]          = getenv("LEARNING_RATE", 1.25e-7)
 
   # https://github.com/mlcommons/training_policies/blob/cfa99da479b8d5931f7a3c67612d021dfb47510a/training_rules.adoc#benchmark_specific_rules
   # "Checkpoint must be collected every 512,000 images. CEIL(512000 / global_batch_size) if 512000 is not divisible by GBS."
@@ -1511,9 +1512,9 @@ def train_stable_diffusion():
   #jit_context_step = TinyJit(model.cond_stage_model.embed_tokens, optimize=True)
 
   @TinyJit
-  def train_step(mean:Tensor, logvar:Tensor, tokens:Tensor, timestep:Tensor, latent_randn:Tensor, noise:Tensor, unet:UNetModel,
-                 optimizer:LAMB, grad_scaler:GradScaler, lr_scheduler:LambdaLR) -> Tensor:
-    optimizer.zero_grad()
+  def acc_grads(mean:Tensor, logvar:Tensor, tokens:Tensor, timestep:Tensor, latent_randn:Tensor, noise:Tensor, unet:UNetModel,
+                optimizer:LAMB, grad_scaler:GradScaler, grad_acc_steps:int) -> Tensor:
+    #optimizer.zero_grad()
 
     std = Tensor.exp(0.5 * logvar.clamp(-30.0, 20.0))
     latent = (mean + std * latent_randn).cast(dtypes.half) * 0.18215
@@ -1527,18 +1528,23 @@ def train_stable_diffusion():
 
     del mean, logvar, std, latent, noise, sqrt_alphas_cumprod_t, sqrt_one_minus_alphas_cumprod_t
     out = unet(latent_with_noise, timestep, context, softmax_dtype=dtypes.float32)
-    loss = ((out - v_true) ** 2).mean() * grad_scaler.scale
+    loss = (((out - v_true) ** 2).mean() * grad_scaler.scale) / float(grad_acc_steps)
     del out, v_true, context
     loss.backward()
     for p in optimizer.params: p.grad = p.grad / grad_scaler.scale
     loss = loss.detach() / grad_scaler.scale
+    Tensor.realize(*[p.grad for p in optimizer.params] + [loss])
+    return loss
 
+  @TinyJit
+  def apply_grads(optimizer:LAMB, grad_scaler:GradScaler, lr_scheduler:LambdaLR):
     # skip the optimizer step if non-finite grads are detected
     grad_scaler.step()
     # the lr still updates even if we skipped an optimizer step
     lr_scheduler.step()
-
-    return loss
+    for p in optimizer.params:
+      p.grad.assign(Tensor.zeros_like(p.grad))
+    Tensor.realize(*[p.grad for p in optimizer.params])
 
   if getenv("RUN_EVAL", ""):
     if not getenv("EVAL_OVERFIT_SET", ""):
@@ -1776,10 +1782,17 @@ def train_stable_diffusion():
       latent_randn = Tensor.randn(*mean.shape, device=GPUS[0])
       noise = Tensor.randn(*mean.shape, device=GPUS[0])
 
-      for t in (mean, logvar, tokens, timestep, latent_randn, noise):
-        t.shard_(GPUS,axis=0)
+      mini_bs = BS // GRAD_ACC_STEPS
+      mini_losses = []
+      for j in range(GRAD_ACC_STEPS):
+        slices = [whole[j*mini_bs: (j+1)*mini_bs] for whole in (mean, logvar, tokens, timestep, latent_randn, noise)]
+        #for t in (mean, logvar, tokens, timestep, latent_randn, noise):
+        for t in slices:
+          t.shard_(GPUS,axis=0)
 
-      loss = train_step(mean, logvar, tokens, timestep, latent_randn, noise, unet, optimizer, grad_scaler, lr_scheduler)
+        mini_losses.append((acc_grads(*slices, unet, optimizer, grad_scaler, GRAD_ACC_STEPS) * GRAD_ACC_STEPS).item())
+      loss = Tensor(sum(mini_losses) / GRAD_ACC_STEPS)
+      apply_grads(optimizer, grad_scaler, lr_scheduler)
 
       elapsed = time.perf_counter() - t0
       print(f"""step {i}: loss: {loss.item():.9f}, elapsed:{elapsed:0.3f}, lr:{optimizer.lr.item():0.3e},

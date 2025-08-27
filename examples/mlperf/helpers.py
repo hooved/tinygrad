@@ -394,8 +394,8 @@ class GradScaler:
     self.growth_tracker.assign(
       grads_all_finite.where(at_interval.where(Tensor(0, device=opt.device), self.growth_tracker + 1), Tensor(0, device=opt.device))
     )
-    for t in opt.params:
-      t.grad = None
+    #for t in opt.params:
+      #t.grad = None
     del g, grads_all_finite, stepped_m, stepped_v, m_hat, v_hat, up, stepped_t
     Tensor.realize(*[opt.b1_t, opt.b2_t, self.scale, self.growth_tracker] + opt.m + opt.v + opt.params + opt.buffers)
 
