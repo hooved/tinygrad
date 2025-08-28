@@ -1529,7 +1529,7 @@ def train_stable_diffusion():
 
     optimizer.step()
     lr_scheduler.step()
-    return loss.to("CPU")
+    return loss
 
   if getenv("RUN_EVAL", ""):
     if not getenv("EVAL_OVERFIT_SET", ""):
@@ -1747,6 +1747,8 @@ def train_stable_diffusion():
   def prepare_data(mean_logvars:list[Tensor], tokens:list[Tensor]) -> list[Tensor]:
     mean_logvar = Tensor.cat(*mean_logvars, dim=0)
     mean, logvar = Tensor.chunk(mean_logvar.cast(dtypes.bfloat16), 2, dim=1)
+    mean = mean.contiguous()
+    logvar = logvar.contiguous()
     tokens = Tensor.cat(*tokens, dim=0)
     timestep = Tensor.randint(BS, low=0, high=alphas_cumprod.shape[0], dtype=dtypes.int, device=GPUS[0])
     latent_randn = Tensor.randn(*mean.shape, device=GPUS[0])
@@ -1759,7 +1761,7 @@ def train_stable_diffusion():
 
   BACKUP_INTERVAL=getenv("BACKUP_INTERVAL", 0)
   RUN_EVAL=getenv("RUN_EVAL", "")
-  wandb_run=wandb.run
+  if WANDB: wandb_run=wandb.run
 
   if not getenv("EVAL_ONLY", ""):
     # training loop
@@ -1786,27 +1788,23 @@ def train_stable_diffusion():
 
       t0b = time.perf_counter()
       mean, logvar, tokens, timestep, latent_randn, noise = prepare_data(mean_logvars, tokens)
-      for i, t in enumerate((mean, logvar, tokens, timestep, latent_randn, noise)):
-        print(f"checking tensor {i} before shard")
-        print(t.mean().item())
-        print(t.std().item())
+      #for j, t in enumerate((mean, logvar, tokens, timestep, latent_randn, noise)):
+        #print(f"checking tensor {j} before shard")
+        #print(t.mean().cast(dtypes.float).item())
+        #print(t.std().cast(dtypes.float).item())
       mean, logvar, tokens, timestep, latent_randn, noise = shard_data(mean, logvar, tokens, timestep, latent_randn, noise)
-      for i, t in enumerate((mean, logvar, tokens, timestep, latent_randn, noise)):
-        print(f"checking tensor {i} after shard")
-        print(t.mean().item())
-        print(t.std().item())
+      #for j, t in enumerate((mean, logvar, tokens, timestep, latent_randn, noise)):
+        #print(f"checking tensor {j} after shard")
+        #print(t.mean().cast(dtypes.float).item())
+        #print(t.std().cast(dtypes.float).item())
 
       t1 = time.perf_counter()
-      Tensor.realize(mean, logvar, tokens, timestep, latent_randn, noise)
       t2 = time.perf_counter()
       loss = train_step(mean, logvar, tokens, timestep, latent_randn, noise, unet, optimizer, lr_scheduler)
       t3 = time.perf_counter()
 
       if WANDB:
-        preloss = time.perf_counter()
-        loss_item = loss.item()
-        print(f"loss.item() time: {time.perf_counter()-preloss:.2f}")
-        wandb_log = {"train/loss": loss_item, "train/loop_time_prev": loop_time, "train/dl_time": dl_time, "train/step": i,
+        wandb_log = {"train/loop_time_prev": loop_time, "train/dl_time": dl_time, "train/step": i,
                      "train/GFLOPS": GlobalCounters.global_ops * 1e-9 / (t3-t1), "train/prerealize_time": t1-t0, "train/input_realize_time": t2-t1,
                      "train/train_step_time": t3-t2}
 
@@ -1853,15 +1851,23 @@ def train_stable_diffusion():
 
           Tensor.realize(*[t.to_(GPUS) for t in train_only_tensors])
 
+      if i % 50 == 0:
+        loss_item = loss.item()
+        print(f"step {i}: loss: {loss_item:.9f}")
+        if WANDB: wandb_log["train/loss"] = loss_item
+        if i <= 1100:
+          lr_item = optimizer.lr.item()
+          print(f"lr:{optimizer.lr.item():0.3e}")
+          if WANDB: wandb_log["train/lr"] = lr_item
       t4 = time.perf_counter()
+
       if WANDB: wandb.log(wandb_log)
       t5 = time.perf_counter()
-
-      print(f"""step {i}: loss: {loss.item():.9f}, lr:{optimizer.lr.item():0.3e},
-    {GlobalCounters.global_ops * 1e-9 / (t3-t1):9.2f} GFLOPS, mem_used: {GlobalCounters.mem_used / 1e9:.2f} GB,
+      print(f"""step {i}: {GlobalCounters.global_ops * 1e-9 / (t3-t1):9.2f} GFLOPS, mem_used: {GlobalCounters.mem_used / 1e9:.2f} GB,
     loop_time_prev: {loop_time:.2f}, dl_time: {dl_time:.2f} prerealize_time: {t1-t0:.2f}, input_realize_time: {t2-t1:.2f}, train_step_time: {t3-t2:.2f},
     t4-t3: {t4-t3:.2f}, wandb_log_time: {t5-t4:.2f}, t0b-t0: {t0b-t0:.2f}, t1-t0b: {t1-t0b:.2f}
     """)
+
       t6 = time.perf_counter()
 
   else:
