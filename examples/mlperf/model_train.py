@@ -1749,14 +1749,17 @@ def train_stable_diffusion():
       with open(f"{RESUME_CKPTDIR}/keys_{RESUME_ITR}.pickle", "rb") as f: seen_keys = pickle.load(f)
     else: seen_keys = []
     dl = batch_load_train_stable_diffusion(BS)
+    t0 = t6 = time.perf_counter()
     for i, batch in enumerate(dl, start=1):
+      loop_time = time.perf_counter() - t0
+      t0 = time.perf_counter()
+      dl_time = t0 - t6
     #i = 0
     #with open("/home/hooved/stable_diffusion/checkpoints/overfit_set_12.pickle", "rb") as f:
       #batch = pickle.load(f)
     #while True:
       #i += 1
       i = RESUME_ITR + i
-      t0 = time.perf_counter()
       GlobalCounters.reset()
       seen_keys += batch["__key__"]
 
@@ -1770,15 +1773,16 @@ def train_stable_diffusion():
       for t in (mean, logvar, tokens, timestep, latent_randn, noise):
         t.shard_(GPUS,axis=0)
 
+      t1 = time.perf_counter()
+      Tensor.realize(mean, logvar, tokens, timestep, latent_randn, noise)
+      t2 = time.perf_counter()
       loss = train_step(mean, logvar, tokens, timestep, latent_randn, noise, unet, optimizer, lr_scheduler)
-
-      elapsed = time.perf_counter() - t0
-      print(f"""step {i}: loss: {loss.item():.9f}, elapsed:{elapsed:0.3f}, lr:{optimizer.lr.item():0.3e},
-    {GlobalCounters.global_ops * 1e-9 / elapsed:9.2f} GFLOPS, mem_used: {GlobalCounters.mem_used / 1e9:.2f} GB""")
+      t3 = time.perf_counter()
 
       if WANDB:
-        wandb_log = {"train/loss": loss.item(), "train/step_time": elapsed, "lr": optimizer.lr.item(),
-                     "train/GFLOPS": GlobalCounters.global_ops * 1e-9 / elapsed, "train/step": i}
+        wandb_log = {"train/loss": loss.item(), "train/loop_time_prev": loop_time, "train/dl_time": dl_time, "lr": optimizer.lr.item(), "train/step": i,
+                     "train/GFLOPS": GlobalCounters.global_ops * 1e-9 / (t3-t1), "train/prerealize_time": t1-t0, "train/input_realize_time": t2-t1,
+                     "train/train_step_time": t3-t2}
 
         if i == 1 and wandb.run is not None:
           with open(f"{UNET_CKPTDIR}/wandb_run_id_{wandb.run.id}", "w") as f:
@@ -1823,7 +1827,16 @@ def train_stable_diffusion():
 
           Tensor.realize(*[t.to_(GPUS) for t in train_only_tensors])
 
+      t4 = time.perf_counter()
       if WANDB: wandb.log(wandb_log)
+      t5 = time.perf_counter()
+
+      print(f"""step {i}: loss: {loss.item():.9f}, lr:{optimizer.lr.item():0.3e},
+    {GlobalCounters.global_ops * 1e-9 / (t3-t1):9.2f} GFLOPS, mem_used: {GlobalCounters.mem_used / 1e9:.2f} GB,
+    loop_time_prev: {loop_time:.2f}, dl_time: {dl_time:.2f} prerealize_time: {t1-t0:.2f}, input_realize_time: {t2-t1:.2f}, train_step_time: {t3-t2:.2f},
+    t4-t3: {t4-t3:.2f}, wandb_log_time: {t5-t4:.2f}
+    """)
+      t6 = time.perf_counter()
 
   else:
     EVAL_CKPT_DIR=getenv("EVAL_CKPT_DIR", "")
