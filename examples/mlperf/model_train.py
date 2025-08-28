@@ -1849,8 +1849,14 @@ def train_stable_diffusion():
       if WANDB: wandb.log(wandb_log)
       if i == 20:
         gv.md(gv.data["out.2.weight"].to(GPUS), unet.out[2].weight)
+        # diff.abs().mean(): 3.3577463726119916e-11
+        # a.abs().mean(): 1.2747265465407054e-08
+        # diff.abs().max(): 5.35436806003986e-10
 
         gv.md(gv.data["out.2.bias"].to(GPUS), unet.out[2].bias)
+        # diff.abs().mean(): 2.4946711363327267e-12  
+        # a.abs().mean(): 1.6649142509095327e-08
+        # diff.abs().max(): 4.027889133340068e-12
 
         import sys
         sys.exit()
