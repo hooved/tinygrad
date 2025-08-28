@@ -1754,7 +1754,10 @@ def train_stable_diffusion():
     dl = batch_load_train_stable_diffusion(BS)
     for i, batch in enumerate(dl, start=1):
     
-      if i == 1: continue # in ref: first sample generates non-finite grad with fp16/loss scaler, which skips the opt step, so we need to skip here
+      if i == 1:
+        # in ref: first sample generates non-finite grad with fp16/loss scaler, which skips the opt step, but not lr_scheduler.step
+        lr_scheduler.step()
+        continue
 
     #i = 0
     #with open("/home/hooved/stable_diffusion/checkpoints/overfit_set_12.pickle", "rb") as f:
