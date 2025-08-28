@@ -1529,7 +1529,7 @@ def train_stable_diffusion():
 
     optimizer.step()
     lr_scheduler.step()
-    return loss
+    return loss.to("CPU")
 
   if getenv("RUN_EVAL", ""):
     if not getenv("EVAL_OVERFIT_SET", ""):
@@ -1742,6 +1742,24 @@ def train_stable_diffusion():
         for name in disk_tensor_names:
           Path(f"{EVAL_CKPT_DIR}/{name}.bytes").unlink(missing_ok=True)
       return clip_score, fid_score
+    
+  @TinyJit
+  def prepare_data(mean_logvars:list[Tensor], tokens:list[Tensor]) -> list[Tensor]:
+    mean_logvar = Tensor.cat(*mean_logvars, dim=0)
+    mean, logvar = Tensor.chunk(mean_logvar.cast(dtypes.bfloat16), 2, dim=1)
+    tokens = Tensor.cat(*tokens, dim=0)
+    timestep = Tensor.randint(BS, low=0, high=alphas_cumprod.shape[0], dtype=dtypes.int, device=GPUS[0])
+    latent_randn = Tensor.randn(*mean.shape, device=GPUS[0])
+    noise = Tensor.randn(*mean.shape, device=GPUS[0])
+    return [mean, logvar, tokens, timestep, latent_randn, noise]
+
+  @TinyJit
+  def shard_data(mean, logvar, tokens, timestep, latent_randn, noise):
+    return [t.shard(GPUS,axis=0) for t in (mean, logvar, tokens, timestep, latent_randn, noise)]
+
+  BACKUP_INTERVAL=getenv("BACKUP_INTERVAL", 0)
+  RUN_EVAL=getenv("RUN_EVAL", "")
+  wandb_run=wandb.run
 
   if not getenv("EVAL_ONLY", ""):
     # training loop
@@ -1763,15 +1781,20 @@ def train_stable_diffusion():
       GlobalCounters.reset()
       seen_keys += batch["__key__"]
 
-      mean_logvar = Tensor.cat(*[Tensor(x, device="CPU") for x in batch['npy']], dim=0)
-      mean, logvar = Tensor.chunk(mean_logvar.cast(dtypes.bfloat16), 2, dim=1)
-      tokens = Tensor.cat(*[model.cond_stage_model.tokenize(text, device="CPU") for text in batch['txt']], dim=0)
-      timestep = Tensor.randint(BS, low=0, high=alphas_cumprod.shape[0], dtype=dtypes.int, device=GPUS[0])
-      latent_randn = Tensor.randn(*mean.shape, device=GPUS[0])
-      noise = Tensor.randn(*mean.shape, device=GPUS[0])
+      mean_logvars = [Tensor(x, device="CPU") for x in batch['npy']]
+      tokens = [model.cond_stage_model.tokenize(text, device="CPU") for text in batch['txt']]
 
-      for t in (mean, logvar, tokens, timestep, latent_randn, noise):
-        t.shard_(GPUS,axis=0)
+      t0b = time.perf_counter()
+      mean, logvar, tokens, timestep, latent_randn, noise = prepare_data(mean_logvars, tokens)
+      for i, t in enumerate((mean, logvar, tokens, timestep, latent_randn, noise)):
+        print(f"checking tensor {i} before shard")
+        print(t.mean().item())
+        print(t.std().item())
+      mean, logvar, tokens, timestep, latent_randn, noise = shard_data(mean, logvar, tokens, timestep, latent_randn, noise)
+      for i, t in enumerate((mean, logvar, tokens, timestep, latent_randn, noise)):
+        print(f"checking tensor {i} after shard")
+        print(t.mean().item())
+        print(t.std().item())
 
       t1 = time.perf_counter()
       Tensor.realize(mean, logvar, tokens, timestep, latent_randn, noise)
@@ -1780,15 +1803,18 @@ def train_stable_diffusion():
       t3 = time.perf_counter()
 
       if WANDB:
-        wandb_log = {"train/loss": loss.item(), "train/loop_time_prev": loop_time, "train/dl_time": dl_time, "lr": optimizer.lr.item(), "train/step": i,
+        preloss = time.perf_counter()
+        loss_item = loss.item()
+        print(f"loss.item() time: {time.perf_counter()-preloss:.2f}")
+        wandb_log = {"train/loss": loss_item, "train/loop_time_prev": loop_time, "train/dl_time": dl_time, "train/step": i,
                      "train/GFLOPS": GlobalCounters.global_ops * 1e-9 / (t3-t1), "train/prerealize_time": t1-t0, "train/input_realize_time": t2-t1,
                      "train/train_step_time": t3-t2}
 
-        if i == 1 and wandb.run is not None:
+        if i == 1 and wandb_run is not None:
           with open(f"{UNET_CKPTDIR}/wandb_run_id_{wandb.run.id}", "w") as f:
             f.write(f"wandb.run.id = {wandb.run.id}")
 
-      if (BACKUP_INTERVAL:=getenv("BACKUP_INTERVAL", 0)) and i % BACKUP_INTERVAL == 0:
+      if BACKUP_INTERVAL and i % BACKUP_INTERVAL == 0:
         prev_ckpt = [file for file in Path(UNET_CKPTDIR).iterdir() if file.is_file() and file.name.startswith("backup_")]
         prev_ckpt = sorted(prev_ckpt, key=lambda x: int(x.name.split("backup_")[1].split(".safetensors")[0]))
         # seen keys from dataset
@@ -1813,7 +1839,7 @@ def train_stable_diffusion():
         print(f"saving unet checkpoint at {fn}")
         safe_save(get_state_dict(unet), fn)
 
-      if getenv("RUN_EVAL", ""):
+      if RUN_EVAL:
         EVAL_INTERVAL = getenv("EVAL_INTERVAL", math.ceil(512_000 / BS))
         if i % EVAL_INTERVAL == 0:
           # prevent OOM
@@ -1834,7 +1860,7 @@ def train_stable_diffusion():
       print(f"""step {i}: loss: {loss.item():.9f}, lr:{optimizer.lr.item():0.3e},
     {GlobalCounters.global_ops * 1e-9 / (t3-t1):9.2f} GFLOPS, mem_used: {GlobalCounters.mem_used / 1e9:.2f} GB,
     loop_time_prev: {loop_time:.2f}, dl_time: {dl_time:.2f} prerealize_time: {t1-t0:.2f}, input_realize_time: {t2-t1:.2f}, train_step_time: {t3-t2:.2f},
-    t4-t3: {t4-t3:.2f}, wandb_log_time: {t5-t4:.2f}
+    t4-t3: {t4-t3:.2f}, wandb_log_time: {t5-t4:.2f}, t0b-t0: {t0b-t0:.2f}, t1-t0b: {t1-t0b:.2f}
     """)
       t6 = time.perf_counter()
 
