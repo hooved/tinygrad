@@ -1765,11 +1765,6 @@ def train_stable_diffusion():
       loop_time = time.perf_counter() - t0
       t0 = time.perf_counter()
       dl_time = t0 - t6
-    #i = 0
-    #with open("/home/hooved/stable_diffusion/checkpoints/overfit_set_12.pickle", "rb") as f:
-      #batch = pickle.load(f)
-    #while True:
-      #i += 1
       i = RESUME_ITR + i
       GlobalCounters.reset()
       seen_keys += batch["__key__"]
@@ -1778,29 +1773,13 @@ def train_stable_diffusion():
       mean, logvar = Tensor(mean, dtype=dtypes.float32, device="CPU"), Tensor(logvar, dtype=dtypes.float32, device="CPU")
       tokens = []
       for text in batch['txt']: tokens += model.cond_stage_model.tokenizer.encode(text, pad_with_zeros=True)
-      print("before")
-      print(tokens[0:5])
       tokens = Tensor(tokens, dtype=dtypes.int32, device="CPU").reshape(-1, 77)
 
-
-      print(batch['npy'][0].flatten()[0:5])
-      print(batch['npy'][-1].flatten()[-5:])
-
-      t0b = time.perf_counter()
-      mean, logvar, tokens, timestep, latent_randn, noise = prepare_data(mean, logvar, tokens)
       t1 = time.perf_counter()
-
-      print("after")
-      print(tokens.to(GPUS[0]).realize().flatten()[0:5].tolist())
-      print(mean.to(GPUS[0]).realize()[0].flatten()[0:5].cast(dtypes.float).tolist())
-      print(logvar.to(GPUS[0]).realize()[-1].flatten()[-5:].cast(dtypes.float).tolist())
-      print(timestep.to(GPUS[0]).realize().flatten()[-5:].tolist())
-      print(latent_randn.to(GPUS[0]).realize().flatten()[-5:].tolist())
-      print(noise.to(GPUS[0]).realize().flatten()[-5:].tolist())
-
+      mean, logvar, tokens, timestep, latent_randn, noise = prepare_data(mean, logvar, tokens)
       t2 = time.perf_counter()
-      #loss = train_step(mean, logvar, tokens, timestep, latent_randn, noise, unet, optimizer, lr_scheduler)
-      loss = Tensor(123)
+
+      loss = train_step(mean, logvar, tokens, timestep, latent_randn, noise, unet, optimizer, lr_scheduler)
       t3 = time.perf_counter()
 
       if WANDB:
@@ -1865,7 +1844,7 @@ def train_stable_diffusion():
       t5 = time.perf_counter()
       print(f"""step {i}: {GlobalCounters.global_ops * 1e-9 / (t3-t1):9.2f} GFLOPS, mem_used: {GlobalCounters.mem_used / 1e9:.2f} GB,
     loop_time_prev: {loop_time:.2f}, dl_time: {dl_time:.2f} prerealize_time: {t1-t0:.2f}, input_realize_time: {t2-t1:.2f}, train_step_time: {t3-t2:.2f},
-    t4-t3: {t4-t3:.2f}, wandb_log_time: {t5-t4:.2f}, t0b-t0: {t0b-t0:.2f}, t1-t0b: {t1-t0b:.2f}
+    t4-t3: {t4-t3:.2f}, wandb_log_time: {t5-t4:.2f}
     """)
 
       t6 = time.perf_counter()
