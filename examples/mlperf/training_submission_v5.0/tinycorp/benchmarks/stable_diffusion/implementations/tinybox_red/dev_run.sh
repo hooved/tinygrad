@@ -42,7 +42,7 @@ export BACKUP_INTERVAL=413
 #export JIT=3 # eval takes ~80% longer, but doesn't crash with Bus error
 export AMD_LLVM=0 # bf16 seems to require this
 #export GPUS=8 BS=248
-export GPUS=8 BS=344
+export GPUS=8 BS=400
 export CONTEXT_BS=816
 export DENOISE_BS=600
 export DECODE_BS=384
@@ -78,7 +78,7 @@ export CKPTDIR="/raid/weights/stable_diffusion"
 export UNET_CKPTDIR="${BASEDIR}/checkpoints/training_checkpoints/${DATETIME}"
 mkdir -p $UNET_CKPTDIR
 
-#export WANDB=1
+export WANDB=1
 #export PARALLEL=0
 export PARALLEL=16
 
