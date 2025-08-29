@@ -1507,12 +1507,18 @@ def train_stable_diffusion():
   #jit_context_step = TinyJit(model.cond_stage_model.embed_tokens, optimize=True)
 
   @TinyJit
-  def train_step(mean:Tensor, logvar:Tensor, tokens:Tensor, timestep:Tensor, latent_randn:Tensor, noise:Tensor, unet:UNetModel,
-                 optimizer:LAMB, lr_scheduler:LambdaLR) -> Tensor:
+  def train_step(mean:Tensor, logvar:Tensor, tokens:Tensor, unet:UNetModel, optimizer:LAMB, lr_scheduler:LambdaLR) -> Tensor:
     optimizer.zero_grad()
 
+    timestep = Tensor.randint(BS, low=0, high=alphas_cumprod.shape[0], dtype=dtypes.int, device=GPUS[0])
+    latent_randn = Tensor.randn(*mean.shape, device=GPUS[0])
+    noise = Tensor.randn(*mean.shape, device=GPUS[0])
+    for t in (mean, logvar, tokens, timestep, latent_randn, noise):
+      t.shard_(GPUS, axis=0)
+
     std = Tensor.exp(0.5 * logvar.clamp(-30.0, 20.0))
-    latent = (mean + std * latent_randn).cast(dtypes.bfloat16) * 0.18215
+    #latent = (mean + std * latent_randn).cast(dtypes.bfloat16) * 0.18215
+    latent = (mean + std * latent_randn) * 0.18215
 
     sqrt_alphas_cumprod_t = sqrt_alphas_cumprod[timestep].reshape(timestep.shape[0], 1, 1, 1)
     sqrt_one_minus_alphas_cumprod_t = sqrt_one_minus_alphas_cumprod[timestep].reshape(timestep.shape[0], 1, 1, 1)
@@ -1521,10 +1527,10 @@ def train_stable_diffusion():
 
     context = model.cond_stage_model.embed_tokens(tokens)
 
-    del mean, logvar, std, latent, noise, sqrt_alphas_cumprod_t, sqrt_one_minus_alphas_cumprod_t
     out = unet(latent_with_noise, timestep, context, softmax_dtype=dtypes.float32)
     loss = ((out - v_true) ** 2).mean()
-    del out, v_true, context
+    del mean, logvar, std, latent, noise, sqrt_alphas_cumprod_t, sqrt_one_minus_alphas_cumprod_t
+    del out, v_true, context, latent_randn, tokens, timestep
     loss.backward()
 
     optimizer.step()
@@ -1776,10 +1782,11 @@ def train_stable_diffusion():
       tokens = Tensor(tokens, dtype=dtypes.int32, device="CPU").reshape(-1, 77)
 
       t1 = time.perf_counter()
-      mean, logvar, tokens, timestep, latent_randn, noise = prepare_data(mean, logvar, tokens)
+      #mean, logvar, tokens, timestep, latent_randn, noise = prepare_data(mean, logvar, tokens)
       t2 = time.perf_counter()
 
-      loss = train_step(mean, logvar, tokens, timestep, latent_randn, noise, unet, optimizer, lr_scheduler)
+      #loss = train_step(mean, logvar, tokens, timestep, latent_randn, noise, unet, optimizer, lr_scheduler)
+      loss = train_step(mean, logvar, tokens, unet, optimizer, lr_scheduler)
       t3 = time.perf_counter()
 
       if WANDB:
@@ -1790,6 +1797,15 @@ def train_stable_diffusion():
         if i == 1 and wandb_run is not None:
           with open(f"{UNET_CKPTDIR}/wandb_run_id_{wandb.run.id}", "w") as f:
             f.write(f"wandb.run.id = {wandb.run.id}")
+
+      preloss = time.perf_counter()
+      loss_item = loss.item()
+      print(f"step {i}: loss: {loss_item:.9f}, loss_elapsed: {time.perf_counter() - preloss:.2f}")
+      pre_lr = time.perf_counter()
+      lr_item = optimizer.lr.item()
+      print(f"lr:{lr_item:0.3e}, lr_elapsed: {time.perf_counter() - pre_lr:.2f}")
+      if WANDB: wandb_log["train/loss"] = loss_item
+      if WANDB: wandb_log["train/lr"] = lr_item
 
       if BACKUP_INTERVAL and i % BACKUP_INTERVAL == 0:
         prev_ckpt = [file for file in Path(UNET_CKPTDIR).iterdir() if file.is_file() and file.name.startswith("backup_")]
@@ -1830,14 +1846,14 @@ def train_stable_diffusion():
 
           Tensor.realize(*[t.to_(GPUS) for t in train_only_tensors])
 
-      if i % 50 == 0:
-        loss_item = loss.item()
-        print(f"step {i}: loss: {loss_item:.9f}")
-        if WANDB: wandb_log["train/loss"] = loss_item
-        if i <= 1100:
-          lr_item = optimizer.lr.item()
-          print(f"lr:{optimizer.lr.item():0.3e}")
-          if WANDB: wandb_log["train/lr"] = lr_item
+      #if i % 50 == 0:
+        #loss_item = loss.item()
+        #print(f"step {i}: loss: {loss_item:.9f}")
+        #if WANDB: wandb_log["train/loss"] = loss_item
+        #if i <= 1100:
+          #lr_item = optimizer.lr.item()
+          #print(f"lr:{optimizer.lr.item():0.3e}")
+          #if WANDB: wandb_log["train/lr"] = lr_item
       t4 = time.perf_counter()
 
       if WANDB: wandb.log(wandb_log)
