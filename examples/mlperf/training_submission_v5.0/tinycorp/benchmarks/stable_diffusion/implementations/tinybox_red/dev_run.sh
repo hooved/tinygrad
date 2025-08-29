@@ -19,9 +19,9 @@
 #pip install webdataset
 source venv/bin/activate
 apt list --installed | grep amdgpu
-export DEBUG=2
-#export BEAM=5 BEAM_UOPS_MAX=8000 BEAM_UPCAST_MAX=256 BEAM_LOCAL_MAX=1024 BEAM_MIN_PROGRESS=5
-#export IGNORE_JIT_FIRST_BEAM=1
+#export DEBUG=2
+export BEAM=5 BEAM_UOPS_MAX=8000 BEAM_UPCAST_MAX=256 BEAM_LOCAL_MAX=1024 BEAM_MIN_PROGRESS=5
+export IGNORE_JIT_FIRST_BEAM=1
 
 #export SEED=$RANDOM
 DATETIME=$(date "+%m%d%H%M")
@@ -78,7 +78,7 @@ export CKPTDIR="/raid/weights/stable_diffusion"
 export UNET_CKPTDIR="${BASEDIR}/checkpoints/training_checkpoints/${DATETIME}"
 mkdir -p $UNET_CKPTDIR
 
-export WANDB=1
+#export WANDB=1
 #export PARALLEL=0
 export PARALLEL=16
 
