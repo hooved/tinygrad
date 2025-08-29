@@ -1744,19 +1744,10 @@ def train_stable_diffusion():
       return clip_score, fid_score
     
   @TinyJit
-  def prepare_data(mean_logvars:list[Tensor], tokens:list[Tensor]) -> list[Tensor]:
-    mean_logvar = Tensor.cat(*mean_logvars, dim=0)
-    mean, logvar = Tensor.chunk(mean_logvar.cast(dtypes.bfloat16), 2, dim=1)
-    mean = mean.contiguous()
-    logvar = logvar.contiguous()
-    tokens = Tensor.cat(*tokens, dim=0)
+  def prepare_data(mean:Tensor, logvar:Tensor, tokens:Tensor) -> list[Tensor]:
     timestep = Tensor.randint(BS, low=0, high=alphas_cumprod.shape[0], dtype=dtypes.int, device=GPUS[0])
     latent_randn = Tensor.randn(*mean.shape, device=GPUS[0])
     noise = Tensor.randn(*mean.shape, device=GPUS[0])
-    return [mean, logvar, tokens, timestep, latent_randn, noise]
-
-  @TinyJit
-  def shard_data(mean, logvar, tokens, timestep, latent_randn, noise):
     return [t.shard(GPUS,axis=0) for t in (mean, logvar, tokens, timestep, latent_randn, noise)]
 
   BACKUP_INTERVAL=getenv("BACKUP_INTERVAL", 0)
@@ -1783,24 +1774,33 @@ def train_stable_diffusion():
       GlobalCounters.reset()
       seen_keys += batch["__key__"]
 
-      mean_logvars = [Tensor(x, device="CPU") for x in batch['npy']]
-      tokens = [model.cond_stage_model.tokenize(text, device="CPU") for text in batch['txt']]
+      mean, logvar = np.split(np.concatenate(batch["npy"], axis=0), 2, axis=1)
+      mean, logvar = Tensor(mean, dtype=dtypes.float32, device="CPU"), Tensor(logvar, dtype=dtypes.float32, device="CPU")
+      tokens = []
+      for text in batch['txt']: tokens += model.cond_stage_model.tokenizer.encode(text, pad_with_zeros=True)
+      print("before")
+      print(tokens[0:5])
+      tokens = Tensor(tokens, dtype=dtypes.int32, device="CPU").reshape(-1, 77)
+
+
+      print(batch['npy'][0].flatten()[0:5])
+      print(batch['npy'][-1].flatten()[-5:])
 
       t0b = time.perf_counter()
-      mean, logvar, tokens, timestep, latent_randn, noise = prepare_data(mean_logvars, tokens)
-      #for j, t in enumerate((mean, logvar, tokens, timestep, latent_randn, noise)):
-        #print(f"checking tensor {j} before shard")
-        #print(t.mean().cast(dtypes.float).item())
-        #print(t.std().cast(dtypes.float).item())
-      mean, logvar, tokens, timestep, latent_randn, noise = shard_data(mean, logvar, tokens, timestep, latent_randn, noise)
-      #for j, t in enumerate((mean, logvar, tokens, timestep, latent_randn, noise)):
-        #print(f"checking tensor {j} after shard")
-        #print(t.mean().cast(dtypes.float).item())
-        #print(t.std().cast(dtypes.float).item())
-
+      mean, logvar, tokens, timestep, latent_randn, noise = prepare_data(mean, logvar, tokens)
       t1 = time.perf_counter()
+
+      print("after")
+      print(tokens.to(GPUS[0]).realize().flatten()[0:5].tolist())
+      print(mean.to(GPUS[0]).realize()[0].flatten()[0:5].cast(dtypes.float).tolist())
+      print(logvar.to(GPUS[0]).realize()[-1].flatten()[-5:].cast(dtypes.float).tolist())
+      print(timestep.to(GPUS[0]).realize().flatten()[-5:].tolist())
+      print(latent_randn.to(GPUS[0]).realize().flatten()[-5:].tolist())
+      print(noise.to(GPUS[0]).realize().flatten()[-5:].tolist())
+
       t2 = time.perf_counter()
-      loss = train_step(mean, logvar, tokens, timestep, latent_randn, noise, unet, optimizer, lr_scheduler)
+      #loss = train_step(mean, logvar, tokens, timestep, latent_randn, noise, unet, optimizer, lr_scheduler)
+      loss = Tensor(123)
       t3 = time.perf_counter()
 
       if WANDB:
