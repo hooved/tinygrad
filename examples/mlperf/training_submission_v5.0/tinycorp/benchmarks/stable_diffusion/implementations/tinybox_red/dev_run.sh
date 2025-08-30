@@ -35,7 +35,8 @@ export MODEL="stable_diffusion"
 #export RESUME_CKPTDIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/08221929"
 #export RESUME_ITR=8260
 #export BACKUP_INTERVAL=2065
-export BACKUP_INTERVAL=413
+#export BACKUP_INTERVAL=413
+export BACKUP_INTERVAL=640
 
 # mi300x
 # use separate BS for the various jits in eval to maximize throughput
