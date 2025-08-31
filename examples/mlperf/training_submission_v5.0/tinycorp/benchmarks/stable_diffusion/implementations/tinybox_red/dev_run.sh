@@ -32,8 +32,8 @@ export HCQDEV_WAIT_TIMEOUT_MS=300000
 export PYTHONPATH="."
 export MODEL="stable_diffusion"
 
-#export RESUME_CKPTDIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/08221929"
-#export RESUME_ITR=8260
+export RESUME_CKPTDIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/08300137"
+export RESUME_ITR=8320
 #export BACKUP_INTERVAL=2065
 #export BACKUP_INTERVAL=413
 export BACKUP_INTERVAL=640
@@ -60,9 +60,9 @@ export CLIP_BS=240
 ####export DENOISE_BS=144
 ####export DECODE_BS=138
 
-export RUN_EVAL=1
-export EVAL_ONLY=1
-export EVAL_CKPT_DIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/08300137/run_eval_6400"
+#export RUN_EVAL=1
+#export EVAL_ONLY=1
+#export EVAL_CKPT_DIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/08300137/run_eval_6400"
 #export EVAL_OVERFIT_SET=1
 #export EVAL_INTERVAL=2065
 #export LIMIT_EVAL_SAMPLES=600
@@ -81,6 +81,6 @@ mkdir -p $UNET_CKPTDIR
 
 export WANDB=1
 #export PARALLEL=4
-#export PARALLEL=0
+export PARALLEL=0
 
 RUNMLPERF=1 python3 examples/mlperf/model_train.py
