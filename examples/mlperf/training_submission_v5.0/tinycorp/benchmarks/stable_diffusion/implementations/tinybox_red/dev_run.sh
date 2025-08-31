@@ -42,7 +42,7 @@ export BACKUP_INTERVAL=640
 # use separate BS for the various jits in eval to maximize throughput
 #export JIT=3 # eval takes ~80% longer, but doesn't crash with Bus error
 
-#export AMD_LLVM=0 # bf16 seems to require this
+export AMD_LLVM=0 # bf16 seems to require this
 export GPUS=8 BS=400
 export CONTEXT_BS=816
 export DENOISE_BS=600
