@@ -41,8 +41,8 @@ export BACKUP_INTERVAL=640
 # mi300x
 # use separate BS for the various jits in eval to maximize throughput
 #export JIT=3 # eval takes ~80% longer, but doesn't crash with Bus error
-export AMD_LLVM=0 # bf16 seems to require this
-#export GPUS=8 BS=248
+
+#export AMD_LLVM=0 # bf16 seems to require this
 export GPUS=8 BS=400
 export CONTEXT_BS=816
 export DENOISE_BS=600
@@ -60,11 +60,11 @@ export CLIP_BS=240
 ####export DENOISE_BS=144
 ####export DECODE_BS=138
 
-#export RUN_EVAL=1
+export RUN_EVAL=1
+export EVAL_ONLY=1
+export EVAL_CKPT_DIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/08300137/run_eval_6400"
 #export EVAL_OVERFIT_SET=1
 #export EVAL_INTERVAL=2065
-#export EVAL_ONLY=1
-#export EVAL_CKPT_DIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/08241246/run_eval"
 #export LIMIT_EVAL_SAMPLES=600
 
 export BASEDIR="/home/hooved/stable_diffusion"
@@ -81,6 +81,6 @@ mkdir -p $UNET_CKPTDIR
 
 export WANDB=1
 #export PARALLEL=4
-export PARALLEL=0
+#export PARALLEL=0
 
 RUNMLPERF=1 python3 examples/mlperf/model_train.py
