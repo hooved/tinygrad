@@ -1385,7 +1385,7 @@ def train_stable_diffusion():
   from collections import namedtuple
   from tinygrad.helpers import Context
   from examples.mlperf.helpers import get_training_state
-  import csv, PIL, pickle
+  import csv, PIL, pickle, subprocess
   import numpy as np
 
   config = {}
@@ -1846,11 +1846,13 @@ def train_stable_diffusion():
 
       t3 = time.perf_counter()
       if WANDB: wandb.log(wandb_log)
+      rocm_out = subprocess.check_output(["rocm-smi"], text=True)
       t5 = time.perf_counter()
       print(f"""step {i}: {GlobalCounters.global_ops * 1e-9 / (t2-t1):9.2f} GFLOPS, mem_used: {GlobalCounters.mem_used / 1e9:.2f} GB,
     loop_time_prev: {loop_time:.2f}, dl_time: {dl_time:.2f}, input_prep_time: {t1-t0:.2f}, train_step_time: {t2-t1:.2f},
     t3-t2: {t3-t2:.4f}, wandb_log_time: {t5-t3:.4f}
     """)
+      print("rocm-smi output:\n" + rocm_out + "\n")
 
       t6 = time.perf_counter()
 
