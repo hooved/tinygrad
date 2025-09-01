@@ -32,8 +32,8 @@ export HCQDEV_WAIT_TIMEOUT_MS=300000
 export PYTHONPATH="."
 export MODEL="stable_diffusion"
 
-export RESUME_CKPTDIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/08311602"
-export RESUME_ITR=8960
+export RESUME_CKPTDIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/09010137"
+export RESUME_ITR=9600
 #export BACKUP_INTERVAL=2065
 #export BACKUP_INTERVAL=413
 export BACKUP_INTERVAL=640
