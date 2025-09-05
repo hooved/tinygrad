@@ -81,7 +81,7 @@ export CKPTDIR="/raid/weights/stable_diffusion"
 #export DATADIR="/home/hooved/stable_diffusion/datasets"
 #export CKPTDIR="/home/hooved/stable_diffusion/checkpoints"
 
-#export WANDB=1
+export WANDB=1
 #export PARALLEL=4
 export PARALLEL=0
 #export PARALLEL=4
