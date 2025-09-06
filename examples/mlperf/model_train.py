@@ -1458,8 +1458,8 @@ def train_stable_diffusion():
     #if v.dtype is dtypes.float32:
       #weights[k] = v.to(Device.DEFAULT).cast(dtypes.float16)
   load_state_dict(model, weights)
-  #unet_module.linear = unet_module.AutocastLinear
-  #unet_module.conv2d = unet_module.AutocastConv2d
+  unet_module.linear = unet_module.AutocastLinear
+  unet_module.conv2d = unet_module.AutocastConv2d
   model.model = namedtuple("DiffusionModel", ["diffusion_model"])(diffusion_model = UNetModel(**unet_params))
   unet:UNetModel = model.model.diffusion_model
 
