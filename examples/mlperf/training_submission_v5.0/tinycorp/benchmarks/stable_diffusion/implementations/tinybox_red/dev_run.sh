@@ -72,7 +72,7 @@ export EVAL_CKPT_DIR="/home/hooved/stable_diffusion/checkpoints/training_checkpo
 export KEEP_EVAL_CACHE=1
 #export EVAL_OVERFIT_SET=1
 #export EVAL_INTERVAL=2065
-export LIMIT_EVAL_SAMPLES=600
+#export LIMIT_EVAL_SAMPLES=600
 
 # mi300x
 export DATADIR="/raid/datasets/stable_diffusion"
