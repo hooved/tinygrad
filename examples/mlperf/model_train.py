@@ -1397,10 +1397,11 @@ def train_stable_diffusion():
 
   # ** hyperparameters **
   BS                 = config["BS"]                     = getenv("BS", 1 * len(GPUS))
-  lr                 = config["LEARNING_RATE"]          = getenv("LEARNING_RATE", 1.25e-7)
+  BASE_LR            = config["LEARNING_RATE"]          = getenv("LEARNING_RATE", 1.25e-7)
+  lr = BS * BASE_LR
   GRAD_ACC_STEPS     = config["GRAD_ACC_STEPS"]         = getenv("GRAD_ACC_STEPS", 1)
   assert BS % GRAD_ACC_STEPS == 0
-  print(f"BS={BS}, lr={lr}, GRAD_ACC_STEPS={GRAD_ACC_STEPS}")
+  print(f"BS={BS}, BASE_LR={BASE_LR}, lr={lr}, GRAD_ACC_STEPS={GRAD_ACC_STEPS}")
   print(f"BS = {BS}")
 
   CONTEXT_BS          = config["CONTEXT_BS"]            = getenv("CONTEXT_BS", 1 * len(GPUS))
