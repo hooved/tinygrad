@@ -1434,7 +1434,8 @@ def train_stable_diffusion():
 
   unet_params = {"adm_in_ch": None, "in_ch": 4, "out_ch": 4, "model_ch": 320, "attention_resolutions": [4, 2, 1], "num_res_blocks": 2,
                  "channel_mult": [1, 2, 4, 4], "d_head": 64, "transformer_depth": [1, 1, 1, 1], "ctx_dim": 1024, "use_linear": True,
-                 "num_groups":16, "st_norm_eps":1e-6, "gelu_approx":"erf"}
+                 #"num_groups":16, "st_norm_eps":1e-6, "gelu_approx":"erf"}
+                 "num_groups":32, "st_norm_eps":1e-6, "gelu_approx":"erf"}
 
   class StableDiffusion:
     def __init__(self):
