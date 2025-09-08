@@ -53,6 +53,9 @@ export DECODE_BS=384
 export INCEPTION_BS=560
 export CLIP_BS=240
 
+#for i in {0..7}; do sudo rocm-smi -d $i --setperfdeterminism 1500; done
+#sudo rocm-smi -d 0 1 2 3 4 5 6 7 --setpoweroverdrive 600
+
 # tinybox red
 #export GPUS=6 BS=12
 #export CONTEXT_BS=600
@@ -65,8 +68,8 @@ export CLIP_BS=240
 
 export UNET_CKPTDIR="${BASEDIR}/checkpoints/training_checkpoints/${DATETIME}"
 mkdir -p $UNET_CKPTDIR
-#export RUN_EVAL=1
-#export EVAL_ONLY=1
+export RUN_EVAL=1
+export EVAL_ONLY=1
 #export EVAL_CKPT_DIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/09050413/run_eval_original"
 #export EVAL_CKPT_DIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/09050413/run_eval_original_v"
 #export KEEP_EVAL_CACHE=1
@@ -82,9 +85,10 @@ export CKPTDIR="/raid/weights/stable_diffusion"
 #export DATADIR="/home/hooved/stable_diffusion/datasets"
 #export CKPTDIR="/home/hooved/stable_diffusion/checkpoints"
 
-export WANDB=1
+#export WANDB=1
 #export PARALLEL=4
 export PARALLEL=0
 
-#EVAL_CKPT_DIR="/home/hooved/stable_diffusion/reports/train_run_09022307/ckpt_dirs/09022307/run_eval_762" RUNMLPERF=1 python3 examples/mlperf/model_train.py
-RUNMLPERF=1 python3 examples/mlperf/model_train.py
+KEEP_EVAL_CACHE=1 EVAL_CKPT_DIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/09072300/run_eval_6000" RUNMLPERF=1 python3 examples/mlperf/model_train.py
+EVAL_CKPT_DIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/09072300/run_eval_3000" RUNMLPERF=1 python3 examples/mlperf/model_train.py
+#RUNMLPERF=1 python3 examples/mlperf/model_train.py
