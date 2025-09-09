@@ -33,8 +33,8 @@ export HCQDEV_WAIT_TIMEOUT_MS=300000
 export PYTHONPATH="."
 export MODEL="stable_diffusion"
 
-#export RESUME_CKPTDIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/09022307"
-#export RESUME_ITR=1524
+export RESUME_CKPTDIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/09090228"
+export RESUME_ITR=5334
 
 # mi300x
 # use separate BS for the various jits in eval to maximize throughput
@@ -51,7 +51,7 @@ export INCEPTION_BS=560
 export CLIP_BS=240
 
 #for i in {0..7}; do sudo rocm-smi -d $i --setperfdeterminism 1500; done
-#sudo rocm-smi -d 0 1 2 3 4 5 6 7 --setpoweroverdrive 450
+#sudo rocm-smi -d 0 1 2 3 4 5 6 7 --setpoweroverdrive 750
 
 # tinybox red
 #export GPUS=6 BS=12
@@ -65,8 +65,8 @@ export CLIP_BS=240
 
 export UNET_CKPTDIR="${BASEDIR}/checkpoints/training_checkpoints/${DATETIME}"
 mkdir -p $UNET_CKPTDIR
-export RUN_EVAL=1
-export EVAL_ONLY=1
+#export RUN_EVAL=1
+#export EVAL_ONLY=1
 #export EVAL_CKPT_DIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/09050413/run_eval_original"
 #export EVAL_CKPT_DIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/09050413/run_eval_original_v"
 #export KEEP_EVAL_CACHE=1
@@ -82,10 +82,9 @@ export CKPTDIR="/raid/weights/stable_diffusion"
 #export DATADIR="/home/hooved/stable_diffusion/datasets"
 #export CKPTDIR="/home/hooved/stable_diffusion/checkpoints"
 
-#export WANDB=1
+export WANDB=1
 #export PARALLEL=4
 export PARALLEL=0
 
-EVAL_CKPT_DIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/09090228/run_eval_5334" RUNMLPERF=1 python3 examples/mlperf/model_train.py
-EVAL_CKPT_DIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/09090228/run_eval_1524" RUNMLPERF=1 python3 examples/mlperf/model_train.py
-#RUNMLPERF=1 python3 examples/mlperf/model_train.py
+#EVAL_CKPT_DIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/09090228/run_eval_1524" RUNMLPERF=1 python3 examples/mlperf/model_train.py
+RUNMLPERF=1 python3 examples/mlperf/model_train.py
