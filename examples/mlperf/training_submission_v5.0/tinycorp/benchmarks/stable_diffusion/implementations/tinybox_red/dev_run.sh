@@ -34,7 +34,7 @@ export PYTHONPATH="."
 export MODEL="stable_diffusion"
 
 export RESUME_CKPTDIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/09091752"
-export RESUME_ITR=9144
+export RESUME_ITR=8382
 
 # mi300x
 # use separate BS for the various jits in eval to maximize throughput
