@@ -30,23 +30,25 @@ export MODEL="stable_diffusion" PYTHONPATH="."
 export GPUS=8 BS=304
 
 # use separate BS for the jits in eval to maximize throughput
-#export RUN_EVAL=1 EVAL_ONLY=1 CONTEXT_BS=816 DENOISE_BS=600 DECODE_BS=384 INCEPTION_BS=560 CLIP_BS=240
+export RUN_EVAL=1 EVAL_ONLY=1 CONTEXT_BS=816 DENOISE_BS=600 DECODE_BS=384 INCEPTION_BS=560 CLIP_BS=240
 
-export WANDB=1
+#export WANDB=1
 export PARALLEL=0
 
-export TOTAL_CKPTS=6
+#export TOTAL_CKPTS=6
 
 DATETIME=$(date "+%m%d%H%M")
 #LOGFILE="sd_red_${DATETIME}_${SEED}.log"
 export UNET_CKPTDIR="${BASEDIR}/checkpoints/training_checkpoints/${DATETIME}"
 mkdir -p $UNET_CKPTDIR
-LEARNING_RATE="6.25e-8" RUNMLPERF=1 python3 examples/mlperf/model_train.py
+EVAL_CKPT_DIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/09141228/run_eval" RUNMLPERF=1 python3 examples/mlperf/model_train.py
+EVAL_CKPT_DIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/09100305/run_eval_15240" RUNMLPERF=1 python3 examples/mlperf/model_train.py
+#LEARNING_RATE="6.25e-8" RUNMLPERF=1 python3 examples/mlperf/model_train.py
 
-sleep 120
+#sleep 120
 
-DATETIME=$(date "+%m%d%H%M")
-export UNET_CKPTDIR="${BASEDIR}/checkpoints/training_checkpoints/${DATETIME}"
-mkdir -p $UNET_CKPTDIR
-LEARNING_RATE="2.5e-7" RUNMLPERF=1 python3 examples/mlperf/model_train.py
+#DATETIME=$(date "+%m%d%H%M")
+#export UNET_CKPTDIR="${BASEDIR}/checkpoints/training_checkpoints/${DATETIME}"
+#mkdir -p $UNET_CKPTDIR
+#LEARNING_RATE="2.5e-7" RUNMLPERF=1 python3 examples/mlperf/model_train.py
 #EVAL_CKPT_DIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/09130207/run_eval_2" RUNMLPERF=1 python3 examples/mlperf/model_train.py
