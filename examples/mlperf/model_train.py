@@ -1534,7 +1534,6 @@ def train_stable_diffusion():
   CKPT_STEP_INTERVAL = config["CKPT_STEP_INTERVAL"]     = math.ceil(512_000 / BS)
   print(f"CKPT_STEP_INTERVAL = {CKPT_STEP_INTERVAL}")
 
-  BASEDIR            = config["BASEDIR"]                = Path(getenv("BASEDIR", "./"))
   CKPTDIR            = config["CKPTDIR"]                = Path(getenv("CKPTDIR", "./checkpoints"))
   DATADIR            = config["DATADIR"]                = Path(getenv("DATADIR", "./datasets"))
   UNET_CKPTDIR       = config["UNET_CKPTDIR"]           = Path(getenv("UNET_CKPTDIR", "./checkpoints/training_checkpoints"))

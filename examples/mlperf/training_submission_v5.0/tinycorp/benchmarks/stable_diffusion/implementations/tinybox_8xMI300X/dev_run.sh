@@ -19,7 +19,6 @@ apt list --installed | grep amdgpu
 export BEAM=5 BEAM_UOPS_MAX=8000 BEAM_UPCAST_MAX=256 BEAM_LOCAL_MAX=1024 BEAM_MIN_PROGRESS=5 IGNORE_JIT_FIRST_BEAM=1 HCQDEV_WAIT_TIMEOUT_MS=300000
 export AMD_LLVM=0 # bf16 seems to require this
 
-export BASEDIR="/home/hooved/stable_diffusion"
 export DATADIR="/raid/datasets/stable_diffusion"
 export CKPTDIR="/raid/weights/stable_diffusion"
 export MODEL="stable_diffusion" PYTHONPATH="."
@@ -39,8 +38,9 @@ export PARALLEL=0
 #export TOTAL_CKPTS=6
 
 DATETIME=$(date "+%m%d%H%M")
-#LOGFILE="sd_red_${DATETIME}_${SEED}.log"
-export UNET_CKPTDIR="${BASEDIR}/checkpoints/training_checkpoints/${DATETIME}"
+#LOGFILE="sd_mi300x_${DATETIME}.log"
+export UNET_CKPTDIR="$HOME/stable_diffusion/checkpoints/training_checkpoints/${DATETIME}"
+mkdir -p $UNET_CKPTDIR
 LEARNING_RATE="1.875e-7" RUNMLPERF=1 python3 examples/mlperf/model_train.py
 
 
