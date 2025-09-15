@@ -19,7 +19,7 @@ apt list --installed | grep amdgpu
 export BEAM=5 BEAM_UOPS_MAX=8000 BEAM_UPCAST_MAX=256 BEAM_LOCAL_MAX=1024 BEAM_MIN_PROGRESS=5 IGNORE_JIT_FIRST_BEAM=1 HCQDEV_WAIT_TIMEOUT_MS=300000
 export AMD_LLVM=0 # bf16 seems to require this
 
-export BASEDIR="$HOME/stable_diffusion"
+export BASEDIR="/home/hooved/stable_diffusion"
 export DATADIR="/raid/datasets/stable_diffusion"
 export CKPTDIR="/raid/weights/stable_diffusion"
 export MODEL="stable_diffusion" PYTHONPATH="."
