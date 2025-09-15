@@ -29,7 +29,7 @@ export CONTEXT_BS=816 DENOISE_BS=600 DECODE_BS=384 INCEPTION_BS=560 CLIP_BS=240
 # use separate BS for the jits in eval to maximize throughput
 #export RUN_EVAL=1 EVAL_ONLY=1 CONTEXT_BS=816 DENOISE_BS=600 DECODE_BS=384 INCEPTION_BS=560 CLIP_BS=240
 
-export WANDB=1
+#export WANDB=1
 export PARALLEL=0
 
 #export TOTAL_CKPTS=6
@@ -38,16 +38,15 @@ DATETIME=$(date "+%m%d%H%M")
 #LOGFILE="sd_mi300x_${DATETIME}.log"
 export UNET_CKPTDIR="$HOME/stable_diffusion/checkpoints/training_checkpoints/${DATETIME}"
 mkdir -p $UNET_CKPTDIR
-export RESUME_CKPTDIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/09150331"
-export RESUME_ITR=6740
-TOTAL_CKPTS=6 LEARNING_RATE="1.875e-7" RUNMLPERF=1 python3 examples/mlperf/model_train.py
 
+#export RESUME_CKPTDIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/09150331"
+#export RESUME_ITR=6740
+#TOTAL_CKPTS=6 LEARNING_RATE="1.875e-7" RUNMLPERF=1 python3 examples/mlperf/model_train.py
 
-
-#mkdir -p $UNET_CKPTDIR
-#mkdir -p $UNET_CKPTDIR/run_eval
 #LEARNING_RATE="1.875e-7" RUNMLPERF=1 python3 examples/mlperf/model_train.py && \
 #ln -s "${UNET_CKPTDIR}/8425.safetensors" "${UNET_CKPTDIR}/run_eval/8425.safetensors" && \
 #ln -s "${UNET_CKPTDIR}/10110.safetensors" "${UNET_CKPTDIR}/run_eval/10110.safetensors" && \
 #sleep 120 && \
-#EVAL_CKPT_DIR="${UNET_CKPTDIR}/run_eval" RUN_EVAL=1 EVAL_ONLY=1 RUNMLPERF=1 python3 examples/mlperf/model_train.py
+
+EVAL_CKPT_DIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/09151858/run_eval" RUN_EVAL=1 EVAL_ONLY=1 RUNMLPERF=1 python3 examples/mlperf/model_train.py
+EVAL_CKPT_DIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/09130207/run_eval_8425" RUN_EVAL=1 EVAL_ONLY=1 RUNMLPERF=1 python3 examples/mlperf/model_train.py
