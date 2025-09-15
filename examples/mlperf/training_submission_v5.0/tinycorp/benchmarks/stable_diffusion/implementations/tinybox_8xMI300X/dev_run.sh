@@ -41,8 +41,8 @@ DATETIME=$(date "+%m%d%H%M")
 #LOGFILE="sd_red_${DATETIME}_${SEED}.log"
 export UNET_CKPTDIR="${BASEDIR}/checkpoints/training_checkpoints/${DATETIME}"
 mkdir -p $UNET_CKPTDIR
-EVAL_CKPT_DIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/09141228/run_eval" RUNMLPERF=1 python3 examples/mlperf/model_train.py
-EVAL_CKPT_DIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/09100305/run_eval_15240" RUNMLPERF=1 python3 examples/mlperf/model_train.py
+EVAL_CKPT_DIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/09130207/run_eval_10110" RUNMLPERF=1 python3 examples/mlperf/model_train.py
+#EVAL_CKPT_DIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/09100305/run_eval_15240" RUNMLPERF=1 python3 examples/mlperf/model_train.py
 #LEARNING_RATE="6.25e-8" RUNMLPERF=1 python3 examples/mlperf/model_train.py
 
 #sleep 120

@@ -1958,6 +1958,7 @@ def train_stable_diffusion():
   else:
     EVAL_CKPT_DIR=getenv("EVAL_CKPT_DIR", "")
     assert EVAL_CKPT_DIR != "", "provide a directory with checkpoints to be evaluated"
+    print(f"running eval on checkpoints in {EVAL_CKPT_DIR}")
 
     for p in Path(EVAL_CKPT_DIR).iterdir():
       if p.name.startswith("wandb_run_id_"):
