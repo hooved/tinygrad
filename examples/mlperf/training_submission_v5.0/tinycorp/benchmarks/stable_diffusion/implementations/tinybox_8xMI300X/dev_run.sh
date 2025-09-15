@@ -43,7 +43,7 @@ DATETIME=$(date "+%m%d%H%M")
 export UNET_CKPTDIR="${BASEDIR}/checkpoints/training_checkpoints/${DATETIME}"
 mkdir -p $UNET_CKPTDIR
 mkdir -p $UNET_CKPTDIR/run_eval
-LEARNING_RATE="2.5e-7" RUNMLPERF=1 python3 examples/mlperf/model_train.py && \
+LEARNING_RATE="1.875e-7" RUNMLPERF=1 python3 examples/mlperf/model_train.py && \
 ln -s "${UNET_CKPTDIR}/8425.safetensors" "${UNET_CKPTDIR}/run_eval/8425.safetensors" && \
 ln -s "${UNET_CKPTDIR}/10110.safetensors" "${UNET_CKPTDIR}/run_eval/10110.safetensors" && \
 sleep 120 && \
