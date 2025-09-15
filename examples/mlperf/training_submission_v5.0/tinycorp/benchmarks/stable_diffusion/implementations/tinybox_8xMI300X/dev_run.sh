@@ -23,9 +23,6 @@ export DATADIR="/raid/datasets/stable_diffusion"
 export CKPTDIR="/raid/weights/stable_diffusion"
 export MODEL="stable_diffusion" PYTHONPATH="."
 
-# set these if resuming from checkpoint
-export RESUME_CKPTDIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/09150331"
-export RESUME_ITR=6740
 export GPUS=8 BS=304
 export CONTEXT_BS=816 DENOISE_BS=600 DECODE_BS=384 INCEPTION_BS=560 CLIP_BS=240
 
@@ -41,7 +38,9 @@ DATETIME=$(date "+%m%d%H%M")
 #LOGFILE="sd_mi300x_${DATETIME}.log"
 export UNET_CKPTDIR="$HOME/stable_diffusion/checkpoints/training_checkpoints/${DATETIME}"
 mkdir -p $UNET_CKPTDIR
-LEARNING_RATE="1.875e-7" RUNMLPERF=1 python3 examples/mlperf/model_train.py
+export RESUME_CKPTDIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/09150331"
+export RESUME_ITR=6740
+TOTAL_CKPTS=6 LEARNING_RATE="1.875e-7" RUNMLPERF=1 python3 examples/mlperf/model_train.py
 
 
 
