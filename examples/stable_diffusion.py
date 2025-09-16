@@ -180,7 +180,7 @@ class StableDiffusion:
       if pretrained:
         weights: dict[str,Tensor] = {k.replace("cond_stage_model.", "", 1):v for k,v in torch_load(pretrained)["state_dict"].items() if k.startswith("cond_stage_model.")}
         weights["model.attn_mask"] = Tensor.full((77, 77), fill_value=float("-inf")).triu(1)
-        load_state_dict(model.cond_stage_model, weights)
+        load_state_dict(self.cond_stage_model, weights)
 
     self.model = namedtuple("DiffusionModel", ["diffusion_model"])(diffusion_model = UNetModel(**unet_init_params))
     if version == "v2-mlperf-train":
