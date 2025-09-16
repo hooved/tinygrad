@@ -35,7 +35,6 @@ mkdir -p $UNET_CKPTDIR
 
 #export RESUME_CKPTDIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/09100305"
 #export RESUME_ITR=15240
-RUNMLPERF=1 python3 examples/mlperf/model_train.py
 TOTAL_CKPTS=6 LEARNING_RATE="2.5e-7" RUNMLPERF=1 python3 examples/mlperf/model_train.py && \
 mkdir -p $UNET_CKPTDIR/run_eval && \
 ln -s "${UNET_CKPTDIR}/10110.safetensors" "${UNET_CKPTDIR}/run_eval/10110.safetensors" && \
