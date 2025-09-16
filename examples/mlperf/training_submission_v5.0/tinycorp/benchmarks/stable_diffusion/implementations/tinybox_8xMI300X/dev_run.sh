@@ -2,10 +2,10 @@
 
 source venv/bin/activate
 # dependencies
-pip install tqdm, numpy, ftfy, regex, pillow, scipy, wandb
+#pip install tqdm, numpy, ftfy, regex, pillow, scipy, wandb
 # webdataset depends on torch.utils.data.DataLoader
-pip install --index-url https://download.pytorch.org/whl/cpu torch
-pip install webdataset
+#pip install --index-url https://download.pytorch.org/whl/cpu torch
+#pip install webdataset
 pip list
 apt list --installed | grep amdgpu
 
