@@ -52,8 +52,8 @@ class LambdaLinearScheduler:
 # based on torch.optim.lr_scheduler.LambdaLR
 class LambdaLR(LR_Scheduler):
   def __init__(self, optimizer:Optimizer, base_lr:Tensor, lr_lambda:Callable):
-    self.optimizer, self.base_lr, self.lr_lambda = optimizer, base_lr, lr_lambda
-    self.epoch_counter = Tensor([0], requires_grad=False, device=self.optimizer.device)
+    super().__init__(optimizer)
+    self.base_lr, self.lr_lambda = base_lr, lr_lambda
 
   def get_lr(self):
     # LR_Scheduler.schedule_step increments self.epoch_counter by 1 before calling get_lr,
