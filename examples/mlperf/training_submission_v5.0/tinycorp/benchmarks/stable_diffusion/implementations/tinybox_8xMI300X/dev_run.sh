@@ -1,6 +1,4 @@
 #!/bin/bash
-for i in {0..7}; do sudo rocm-smi -d $i --setperfdeterminism 1500; done
-sudo rocm-smi -d 0 1 2 3 4 5 6 7 --setpoweroverdrive 750
 
 # dependencies
 #pip install tqdm, numpy, ftfy, regex, pillow, scipy
@@ -27,11 +25,11 @@ DATETIME=$(date "+%m%d%H%M")
 #LOGFILE="sd_mi300x_${DATETIME}.log"
 export UNET_CKPTDIR="$HOME/stable_diffusion/checkpoints/training_checkpoints/${DATETIME}"
 mkdir -p $UNET_CKPTDIR
-
-EVAL_CKPT_DIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/09100305/run_eval_15240" python3 examples/mlperf/model_eval.py
 #export RESUME_CKPTDIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/09100305"
 #export RESUME_ITR=15240
-#TOTAL_CKPTS=10 LEARNING_RATE="2.5e-7" RUNMLPERF=1 python3 examples/mlperf/model_train.py && \
-#mkdir -p $UNET_CKPTDIR/run_eval && \
-#ln -s "${UNET_CKPTDIR}/10110.safetensors" "${UNET_CKPTDIR}/run_eval/10110.safetensors" && \
-#ln -s "${UNET_CKPTDIR}/8425.safetensors" "${UNET_CKPTDIR}/run_eval/8425.safetensors" && \
+
+for i in {0..7}; do sudo rocm-smi -d $i --setperfdeterminism 1500; done
+sudo rocm-smi -d 0 1 2 3 4 5 6 7 --setpoweroverdrive 450
+TOTAL_CKPTS=10 LEARNING_RATE="2.5e-7" RUNMLPERF=1 python3 examples/mlperf/model_train.py && \
+sudo rocm-smi -d 0 1 2 3 4 5 6 7 --setpoweroverdrive 750 && \
+EVAL_CKPT_DIR=$UNET_CKPTDIR python3 examples/mlperf/model_eval.py
