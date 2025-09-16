@@ -1,6 +1,6 @@
 #!/bin/bash
 for i in {0..7}; do sudo rocm-smi -d $i --setperfdeterminism 1500; done
-sudo rocm-smi -d 0 1 2 3 4 5 6 7 --setpoweroverdrive 750
+sudo rocm-smi -d 0 1 2 3 4 5 6 7 --setpoweroverdrive 450
 
 # dependencies
 #pip install tqdm
@@ -25,29 +25,19 @@ export MODEL="stable_diffusion" PYTHONPATH="."
 
 export GPUS=8 BS=304
 export CONTEXT_BS=816 DENOISE_BS=600 DECODE_BS=384 INCEPTION_BS=560 CLIP_BS=240
-
-# use separate BS for the jits in eval to maximize throughput
-#export RUN_EVAL=1 EVAL_ONLY=1 CONTEXT_BS=816 DENOISE_BS=600 DECODE_BS=384 INCEPTION_BS=560 CLIP_BS=240
-
 export WANDB=1
 export PARALLEL=0
-
-#export TOTAL_CKPTS=6
 
 DATETIME=$(date "+%m%d%H%M")
 #LOGFILE="sd_mi300x_${DATETIME}.log"
 export UNET_CKPTDIR="$HOME/stable_diffusion/checkpoints/training_checkpoints/${DATETIME}"
 mkdir -p $UNET_CKPTDIR
 
-export RESUME_CKPTDIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/09100305"
-export RESUME_ITR=15240
+#export RESUME_CKPTDIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/09100305"
+#export RESUME_ITR=15240
 RUNMLPERF=1 python3 examples/mlperf/model_train.py
-#TOTAL_CKPTS=6 LEARNING_RATE="1.875e-7" RUNMLPERF=1 python3 examples/mlperf/model_train.py
-
-#LEARNING_RATE="1.875e-7" RUNMLPERF=1 python3 examples/mlperf/model_train.py && \
-#ln -s "${UNET_CKPTDIR}/8425.safetensors" "${UNET_CKPTDIR}/run_eval/8425.safetensors" && \
-#ln -s "${UNET_CKPTDIR}/10110.safetensors" "${UNET_CKPTDIR}/run_eval/10110.safetensors" && \
-#sleep 120 && \
-
-#EVAL_CKPT_DIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/09151858/run_eval" RUN_EVAL=1 EVAL_ONLY=1 RUNMLPERF=1 python3 examples/mlperf/model_train.py
-#EVAL_CKPT_DIR="/home/hooved/stable_diffusion/checkpoints/training_checkpoints/09130207/run_eval_8425" RUN_EVAL=1 EVAL_ONLY=1 RUNMLPERF=1 python3 examples/mlperf/model_train.py
+TOTAL_CKPTS=6 LEARNING_RATE="2.5e-7" RUNMLPERF=1 python3 examples/mlperf/model_train.py && \
+mkdir -p $UNET_CKPTDIR/run_eval && \
+ln -s "${UNET_CKPTDIR}/10110.safetensors" "${UNET_CKPTDIR}/run_eval/10110.safetensors" && \
+ln -s "${UNET_CKPTDIR}/8425.safetensors" "${UNET_CKPTDIR}/run_eval/8425.safetensors" && \
+EVAL_CKPT_DIR="$UNET_CKPTDIR/run_eval" RUN_EVAL=1 EVAL_ONLY=1 RUNMLPERF=1 python3 examples/mlperf/model_train.py
