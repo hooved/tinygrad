@@ -327,7 +327,8 @@ def eval_stable_diffusion():
           wandb.config.update({"ckpts_from_wandb_training_run_id": wandb_run_id[1]})
     elif p.name.endswith(".safetensors"):
       ckpt_iteration = p.name.split(".safetensors")[0]
-      if ckpt_iteration.startswith("backup_"): ckpt_iteration = ckpt_iteration.replace("backup_", "", 1)
+      #if ckpt_iteration.startswith("backup_"): ckpt_iteration = ckpt_iteration.replace("backup_", "", 1)
+      if ckpt_iteration.startswith("backup_"): continue
       assert ckpt_iteration.isdigit(), f"invalid checkpoint name: {p.name}, expected <digits>.safetensors or backup_<digits>.safetensors"
       eval_queue.append((int(ckpt_iteration), p))
   assert len(eval_queue), f'no files ending with ".safetensors" were found in {EVAL_CKPT_DIR}'
