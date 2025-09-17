@@ -22,7 +22,7 @@ export MODEL="stable_diffusion" PYTHONPATH="."
 export GPUS=8 BS=304
 export CONTEXT_BS=816 DENOISE_BS=600 DECODE_BS=384 INCEPTION_BS=560 CLIP_BS=240
 export WANDB=1
-export PARALLEL=4
+export PARALLEL=0
 
 DATETIME=$(date "+%m%d%H%M")
 #LOGFILE="sd_mi300x_${DATETIME}.log"
