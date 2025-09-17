@@ -30,12 +30,7 @@ mkdir -p $UNET_CKPTDIR
 #export RESUME_ITR=15240
 
 for i in {0..7}; do sudo rocm-smi -d $i --setperfdeterminism 1500; done
-sudo rocm-smi -d 0 1 2 3 4 5 6 7 --setpoweroverdrive 750
-RUNMLPERF=1 python3 examples/mlperf/model_train.py
-
-#for i in {0..7}; do sudo rocm-smi -d $i --setperfdeterminism 1500; done
-#sudo rocm-smi -d 0 1 2 3 4 5 6 7 --setpoweroverdrive 450
-#TOTAL_CKPTS=10 LEARNING_RATE="2.5e-7" RUNMLPERF=1 python3 examples/mlperf/model_train.py
-#TOTAL_CKPTS=10 LEARNING_RATE="2.5e-7" RUNMLPERF=1 python3 examples/mlperf/model_train.py && \
-#sudo rocm-smi -d 0 1 2 3 4 5 6 7 --setpoweroverdrive 750 && \
-#EVAL_CKPT_DIR=$UNET_CKPTDIR python3 examples/mlperf/model_eval.py
+sudo rocm-smi -d 0 1 2 3 4 5 6 7 --setpoweroverdrive 450
+TOTAL_CKPTS=10 LEARNING_RATE="2.5e-7" RUNMLPERF=1 python3 examples/mlperf/model_train.py && \
+sudo rocm-smi -d 0 1 2 3 4 5 6 7 --setpoweroverdrive 750 && \
+EVAL_CKPT_DIR=$UNET_CKPTDIR python3 examples/mlperf/model_eval.py
