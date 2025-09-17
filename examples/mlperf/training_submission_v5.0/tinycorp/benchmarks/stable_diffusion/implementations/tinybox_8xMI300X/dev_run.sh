@@ -8,6 +8,8 @@ source venv/bin/activate
 #pip install webdataset
 pip list
 apt list --installed | grep amdgpu
+rocm-smi --version
+modinfo amdgpu | grep version
 
 #export BEAM=5 BEAM_UOPS_MAX=8000 BEAM_UPCAST_MAX=256 BEAM_LOCAL_MAX=1024 BEAM_MIN_PROGRESS=5 IGNORE_JIT_FIRST_BEAM=1 HCQDEV_WAIT_TIMEOUT_MS=300000
 HCQDEV_WAIT_TIMEOUT_MS=300000
