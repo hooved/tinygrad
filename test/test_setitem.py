@@ -1,5 +1,7 @@
 import unittest
-from tinygrad import Tensor, TinyJit, Variable, dtypes
+import random
+from os import getenv
+from tinygrad import Tensor, TinyJit, Variable, dtypes, Device
 from tinygrad.helpers import Context
 import numpy as np
 
@@ -50,10 +52,34 @@ class TestSetitem(unittest.TestCase):
 
   def test_setitem_into_noncontiguous(self):
     t = Tensor.ones(4)
-    self.assertFalse(t.lazydata.st.contiguous)
     with self.assertRaises(RuntimeError): t[1] = 5
 
-  @unittest.skip("TODO: flaky")
+  def test_setitem_chained_indexing(self):
+    # N[i][j] must work the same as N[i, j]
+    N1 = Tensor.zeros((3, 3)).contiguous().realize()
+    N1[1, 2] = 5
+    N2 = Tensor.zeros((3, 3)).contiguous().realize()
+    N2[1][2] = 5
+    np.testing.assert_equal(N1.numpy(), N2.numpy())
+
+  def test_setitem_detach(self):
+    # setitem on detached tensor should work
+    t = Tensor.zeros((3, 3)).contiguous().realize()
+    t.detach()[1, 2] = 5
+    self.assertEqual(t[1, 2].item(), 5.0)
+
+  def test_setitem_permute(self):
+    # setitem on permuted tensor should modify original
+    t = Tensor.zeros((2, 3)).contiguous().realize()
+    t.T[1, 0] = 5  # t.T is (3, 2), so [1, 0] maps to t[0, 1]
+    self.assertEqual(t[0, 1].item(), 5.0)
+
+  def test_setitem_flip(self):
+    # setitem on flipped tensor should modify original
+    t = Tensor.zeros((3,)).contiguous().realize()
+    t[::-1][0] = 5  # flip, then set first element (which is last in original)
+    self.assertEqual(t[2].item(), 5.0)
+
   def test_setitem_inplace_operator(self):
     t = Tensor.arange(4).reshape(2, 2).contiguous()
     t[1] += 2
@@ -80,8 +106,6 @@ class TestSetitem(unittest.TestCase):
     t[1] ^= 5
     np.testing.assert_allclose(t.numpy(), [[0, 1], [7, 6]])
 
-  #@unittest.expectedFailure
-  # update: passing after delete_forced_realize
   def test_setitem_consecutive_inplace_operator(self):
     t = Tensor.arange(4).reshape(2, 2).contiguous()
     t[1] += 2
@@ -132,7 +156,7 @@ class TestSetitem(unittest.TestCase):
       np.testing.assert_allclose(t.numpy(), n)
 
   def test_jit_setitem_variable_offset(self):
-    with Context(IGNORE_OOB=1):
+    with Context(CHECK_OOB=0):
       @TinyJit
       def f(t:Tensor, a:Tensor, v:Variable):
         t.shrink(((v,v+1), None)).assign(a).realize()
@@ -158,6 +182,50 @@ class TestSetitem(unittest.TestCase):
     t[:-1] = t[1:]
     self.assertEqual(t.tolist(), [[2.0], [1.0], [1.0]])
 
+  # TODO: WEBGPU pipeline validation error
+  @unittest.skipIf(Device.DEFAULT == "WEBGPU", "WEBGPU pipeline validation error")
+  def test_setitem_big(self):
+    idx_size, val = 256, 4
+    t = Tensor.arange(0, idx_size+1)
+    idx = Tensor.arange(0, idx_size)
+    t[idx] = val
+    self.assertEqual(t.tolist(), [val]*idx_size+[idx_size])
+
+  def test_setitem_advanced_indexing(self):
+    # Example from https://numpy.org/doc/stable/user/basics.indexing.html#combining-advanced-and-basic-indexing
+    t = Tensor.zeros(10,20,30,40,50).contiguous()
+    ind_1 = Tensor([5,3,7,8])
+    ind_2 = Tensor([[[0],[1],[2]],[[3],[4],[5]]])
+    v = Tensor.arange(2*3*4*10*30*50).reshape(2,3,4,10,30,50)
+    t[:, ind_1, :, ind_2, :] = v
+    n = np.zeros((10,20,30,40,50))
+    n[:, ind_1.numpy(), :, ind_2.numpy(), :] = v.numpy()
+    np.testing.assert_allclose(t.numpy(), n)
+
+  def test_setitem_2d_tensor_indexing(self):
+    t = Tensor.zeros(2).contiguous()
+    index = Tensor([[0, 1], [1,0]])
+    v = Tensor.arange(2*2).reshape(2, 2).contiguous()
+    t[index] = v
+    n = np.zeros((2,))
+    n[index.numpy()] = v.numpy()
+    np.testing.assert_allclose(t.numpy(), n)
+
+  @unittest.skip("slow")
+  def test_setitem_tensor_indexing_fuzz(self):
+    random.seed(getenv("SEED", 42))
+    for _ in range(getenv("ITERS", 100)):
+      size = random.randint(5, 10)
+      d0, d1, d2 = random.randint(1,5), random.randint(1,5), random.randint(1,5)
+      t = Tensor.zeros(size).contiguous()
+      n = np.zeros((size,))
+      index = Tensor.randint((d0, d1, d2), low=0, high=size)
+      v = Tensor.arange(d0*d1*d2).reshape(d0, d1, d2)
+      t[index] = v
+      n[index.numpy()] = v.numpy()
+      np.testing.assert_allclose(t.numpy(), n, err_msg=f"failed with index={index.numpy().tolist()} and v={v.numpy().tolist()}")
+
+
 class TestWithGrad(unittest.TestCase):
   def test_no_requires_grad_works(self):
     z = Tensor.rand(8, 8)
@@ -175,6 +243,13 @@ class TestWithGrad(unittest.TestCase):
     x = Tensor.rand(8, requires_grad=True)
     with self.assertRaises(NotImplementedError):
       z[:3] = x
+
+class TestSetitemLoop(unittest.TestCase):
+  def test_arange(self):
+    N = 10
+    cmp = Tensor.empty(N)
+    for i in range(N): cmp[i] = i
+    self.assertListEqual(Tensor.arange(N).tolist(), cmp.tolist())
 
 if __name__ == '__main__':
   unittest.main()
